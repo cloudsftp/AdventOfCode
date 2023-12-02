@@ -4,7 +4,7 @@ use anyhow::{anyhow, Error};
 use regex::Regex;
 
 fn main() {
-    let mut file = File::open("sample_data").unwrap();
+    let mut file = File::open("data").unwrap();
 
     let mut content: String = "".to_string();
     file.read_to_string(&mut content).unwrap();
@@ -15,7 +15,15 @@ fn main() {
         .collect::<Result<_, _>>()
         .unwrap();
 
-    println!("{:?}", games)
+    let numbers = (12, 13, 14);
+    let result: u32 = games
+        .into_iter()
+        .filter(|g| g.possible(numbers))
+        //.inspect(|g| println!("debug: {:?}", g))
+        .map(|g| g.id)
+        .sum();
+
+    println!("result: {}", result)
 }
 
 #[derive(Debug)]
@@ -29,6 +37,18 @@ struct Round {
     r: u32,
     g: u32,
     b: u32,
+}
+
+impl Game {
+    fn possible(&self, numbers: (u32, u32, u32)) -> bool {
+        self.rounds.iter().map(|r| r.possible(numbers)).all(|b| b)
+    }
+}
+
+impl Round {
+    fn possible(&self, numbers: (u32, u32, u32)) -> bool {
+        self.r <= numbers.0 && self.g <= numbers.1 && self.b <= numbers.2
+    }
 }
 
 // Parsing
@@ -54,7 +74,7 @@ impl TryFrom<&str> for Game {
 
 impl Game {
     fn parse_id(input: &str) -> Result<u32, Error> {
-        let game_id_pattern = Regex::new("Game (\\d)+").expect("must compile");
+        let game_id_pattern = Regex::new("Game (\\d+)$").expect("must compile");
         let captured = game_id_pattern
             .captures(input)
             .ok_or(anyhow!("invalid game id part: {}", input))?;
