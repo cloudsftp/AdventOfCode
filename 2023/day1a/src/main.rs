@@ -8,12 +8,9 @@ fn main() {
 
     let mut calibration_numbers = vec![];
 
-    for line in content.split("\n") {
-        if line.len() == 0 {
-            continue;
-        }
-
+    for line in content.lines() {
         let digits = line.chars().filter(|c| c.is_digit(10)).collect::<Vec<_>>();
+
         let (c1, c2) = match digits.len() {
             0 => panic!("{}", line),
             1 => {
