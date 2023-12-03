@@ -5,7 +5,7 @@ extern crate test;
 use std::{fs::File, io::Read, u32};
 
 use clap::Parser;
-use regex::Regex;
+use regex::{Match, Regex};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -28,25 +28,24 @@ fn main() {
 }
 
 fn run(content: &str) -> u32 {
-    let sym_regex = Regex::new("[^\\.\\d]").unwrap();
-    let symbol_positions = get_symbol_positions(content, &sym_regex);
-
     let num_regex = Regex::new("\\d+").unwrap();
+    let number_matches = get_number_positions(content, &num_regex);
+
     content
         .lines()
         .enumerate()
-        .map(|(i, l)| process_line(i, l, &num_regex, &symbol_positions))
+        .map(|(i, l)| process_line(i, l, &number_matches))
         .sum()
 }
 
-fn get_symbol_positions(content: &str, sym_regex: &Regex) -> Vec<Vec<usize>> {
+fn get_number_positions<'a>(content: &'a str, num_regex: &'a Regex) -> Vec<Vec<Match<'a>>> {
     let mut positions = vec![];
 
     for line in content.lines() {
         let mut line_positions = vec![];
 
-        for sym_match in sym_regex.find_iter(line) {
-            line_positions.push(sym_match.start());
+        for num_match in num_regex.find_iter(line) {
+            line_positions.push(num_match);
         }
 
         positions.push(line_positions);
@@ -55,28 +54,33 @@ fn get_symbol_positions(content: &str, sym_regex: &Regex) -> Vec<Vec<usize>> {
     positions
 }
 
-fn process_line(
-    i: usize,
-    line: &str,
-    num_regex: &Regex,
-    symbol_positions: &Vec<Vec<usize>>,
-) -> u32 {
-    let mut positions = symbol_positions[i].clone();
+fn process_line(i: usize, line: &str, number_matches: &Vec<Vec<Match>>) -> u32 {
+    let mut num_matches = number_matches[i].clone();
     if i > 0 {
-        positions.extend_from_slice(&symbol_positions[i - 1])
+        num_matches.extend_from_slice(&number_matches[i - 1])
     }
-    if i < symbol_positions.len() - 1 {
-        positions.extend_from_slice(&symbol_positions[i + 1])
+    if i < number_matches.len() - 1 {
+        num_matches.extend_from_slice(&number_matches[i + 1])
     }
 
-    num_regex
-        .find_iter(line)
-        .filter(|m| {
-            positions
-                .iter()
-                .any(|p| if m.start() == 0 { true } else { *p >= m.start() - 1 } && *p <= m.end())
+    line.chars()
+        .enumerate()
+        .filter(|(_, c)| *c == '*')
+        .filter_map(|(i, _)| {
+            let adj_num_matches : Vec<&Match<'_>> = num_matches.iter()
+            .filter(|m| if m.start() == 0 { true } else { i >= m.start() - 1 } && i <= m.end()).collect();
+
+            match adj_num_matches.len() {
+                2 => {
+                    let a = adj_num_matches[0].as_str().parse::<u32>().expect("match is only digits");
+                    let b = adj_num_matches[1].as_str().parse::<u32>().expect("match is only digits");
+
+                    Some(a * b)
+                },
+                _ => None,
+                
+            }
         })
-        .map(|m| m.as_str().parse::<u32>().expect("match is only digits"))
         .sum()
 }
 
@@ -94,7 +98,7 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content);
-        assert_eq!(result, 4361)
+        assert_eq!(result, 467835)
     }
 
     #[test]
@@ -105,7 +109,7 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content);
-        assert_eq!(result, 514969)
+        assert_eq!(result, 78915902)
     }
 
     #[bench]
