@@ -27,14 +27,11 @@ fn run(content: &str) -> u32 {
     let sym_regex = Regex::new("[^\\.\\d]").unwrap();
     let symbol_positions = get_symbol_positions(content, &sym_regex);
 
-    for (line_positions, line) in symbol_positions.iter().zip(content.lines()) {
-        println!("{} - {:?}", line, line_positions)
-    }
-
     let num_regex = Regex::new("\\d+").unwrap();
     content
         .lines()
-        .map(|l| process_line(l, &num_regex, &sym_regex))
+        .enumerate()
+        .map(|(i, l)| process_line(i, l, &num_regex, &symbol_positions))
         .sum()
 }
 
@@ -54,15 +51,29 @@ fn get_symbol_positions(content: &str, sym_regex: &Regex) -> Vec<Vec<usize>> {
     positions
 }
 
-fn process_line(line: &str, num_regex: &Regex, sym_regex: &Regex) -> u32 {
-    let num_matches = num_regex.find_iter(line);
-
-    //    println!("--- {}", line);
-    for num_match in num_matches {
-        //        println!("{:?}", num_match)
+fn process_line(
+    i: usize,
+    line: &str,
+    num_regex: &Regex,
+    symbol_positions: &Vec<Vec<usize>>,
+) -> u32 {
+    let mut positions = symbol_positions[i].clone();
+    if i > 0 {
+        positions.append(symbol_positions[i - 1].clone().as_mut());
+    }
+    if i < symbol_positions.len() - 1 {
+        positions.append(symbol_positions[i + 1].clone().as_mut());
     }
 
-    0
+    num_regex
+        .find_iter(line)
+        .filter(|m| {
+            positions
+                .iter()
+                .any(|p| if m.start() == 0 { true } else { *p >= m.start() - 1 } && *p <= m.end())
+        })
+        .map(|m| m.as_str().parse::<u32>().expect("match is only digits"))
+        .sum()
 }
 
 #[cfg(test)]
