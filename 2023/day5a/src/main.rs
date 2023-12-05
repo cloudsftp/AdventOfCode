@@ -44,16 +44,10 @@ fn apply_maps(numbers: Vec<u64>, maps: &Vec<IngredientMap>) -> Vec<u64> {
 }
 
 fn apply_maps_single(number: u64, maps: &Vec<IngredientMap>) -> u64 {
-    let maps: Vec<&IngredientMap> = maps
+    let map = maps
         .iter()
         .filter(|m| number >= m.src && number < m.src + m.len)
-        .collect();
-
-    if maps.len() > 1 {
-        panic!("matching maps: {}", maps.len())
-    }
-
-    let map = maps.get(0);
+        .next();
 
     match map {
         None => number,
@@ -81,8 +75,6 @@ fn parse(content: &str) -> (Vec<u64>, Vec<Vec<IngredientMap>>) {
 
     let mut maps = vec![];
     while let Some(_) = lines.next() {
-        lines.next();
-
         maps.push(
             (&mut lines)
                 .take_while(|l| !l.is_empty())
@@ -148,7 +140,7 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content);
-        assert_eq!(result, 8063216)
+        assert_eq!(result, 323142486)
     }
 
     #[bench]
