@@ -2,7 +2,7 @@
 
 extern crate test;
 
-use std::{fs::File, io::Read};
+use std::{f64, fs::File, io::Read};
 
 use clap::Parser;
 
@@ -33,15 +33,14 @@ fn run(content: &str) -> u64 {
 }
 
 fn number_of_ways_to_win(round: &Round) -> u64 {
-    (0..round.time).filter(|t| will_win(t, round)).count() as u64
-}
+    let root = ((round.time.pow(2) - 4 * round.dist) as f64).sqrt();
+    let zero_point_l = (round.time as f64 - root) / 2.;
+    let zero_point_r = (round.time as f64 + root) / 2.;
 
-fn will_win(hold_time: &u64, round: &Round) -> bool {
-    let speed = hold_time;
-    let travel_time = round.time - hold_time;
-    let our_dist = travel_time * speed;
+    let l = zero_point_l.ceil() as u64;
+    let r = zero_point_r.floor() as u64;
 
-    our_dist > round.dist
+    r + 1 - l
 }
 
 // Parsing
