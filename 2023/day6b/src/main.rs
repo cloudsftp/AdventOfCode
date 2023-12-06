@@ -27,10 +27,9 @@ fn main() {
 }
 
 fn run(content: &str) -> u64 {
-    let rounds = parse(content);
-    let round = rounds.get(0).expect("should parse exactly one round");
+    let round = parse(content);
 
-    number_of_ways_to_win(round)
+    number_of_ways_to_win(&round)
 }
 
 fn number_of_ways_to_win(round: &Round) -> u64 {
@@ -47,23 +46,21 @@ fn will_win(hold_time: &u64, round: &Round) -> bool {
 
 // Parsing
 
-fn parse(content: &str) -> Vec<Round> {
+fn parse(content: &str) -> Round {
     let mut lines = content.lines();
 
-    let times = parse_line(lines.next().expect("input has two lines"));
-    let dists = parse_line(lines.next().expect("input has two lines"));
+    let time = parse_line(lines.next().expect("input has two lines"));
+    let dist = parse_line(lines.next().expect("input has two lines"));
 
-    times
-        .zip(dists)
-        .map(|(time, dist)| Round { time, dist })
-        .collect()
+    Round { time, dist }
 }
 
-fn parse_line<'a>(line: &'a str) -> Box<dyn Iterator<Item = u64> + 'a> {
-    Box::new(line.split_ascii_whitespace().skip(1).map(|p| {
-        p.parse::<u64>()
-            .expect("parts should consist of digits only")
-    }))
+fn parse_line(line: &str) -> u64 {
+    line.split_ascii_whitespace()
+        .skip(1)
+        .collect::<String>()
+        .parse()
+        .expect("should consist of digits only")
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -99,7 +96,7 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content);
-        assert_eq!(result, 323142486)
+        assert_eq!(result, 49240091)
     }
 
     #[bench]
