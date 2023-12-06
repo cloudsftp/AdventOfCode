@@ -37,7 +37,6 @@ fn run(content: &str) -> i64 {
         .min()
         .expect("resulting vector should have at least one element")
 }
-
 fn apply_maps(seeds: Vec<Seeds>, maps: &Vec<IngredientMap>) -> Vec<Seeds> {
     println!("\n\n\n#################################\nmaps:\n{:?}", maps);
     seeds
@@ -52,16 +51,12 @@ fn apply_maps_single(seeds: Seeds, maps: &Vec<IngredientMap>) -> Vec<Seeds> {
         .into_iter()
         .filter(|m| m.src < seeds.start + seeds.len && m.src + m.len > seeds.start)
         .collect();
-
     maps.sort_by_key(|m| m.src);
-
-    println!("\n----\nseeds:\n{:?}", seeds);
 
     let mut new_seeds = vec![];
     let mut last_not_mapped = seeds.start;
 
     for map in maps {
-        println!("lnp: {}, map: {:?}", last_not_mapped, map);
         // Without mapping
         if last_not_mapped < map.src {
             new_seeds.push(Seeds {
@@ -70,6 +65,7 @@ fn apply_maps_single(seeds: Seeds, maps: &Vec<IngredientMap>) -> Vec<Seeds> {
             });
         }
 
+        // With mapping
         if last_not_mapped <= map.src {
             let start = map.dest;
             let len = map.len.min(seeds.start + seeds.len - map.src);
@@ -83,14 +79,13 @@ fn apply_maps_single(seeds: Seeds, maps: &Vec<IngredientMap>) -> Vec<Seeds> {
         }
     }
 
+    // Without mapping
     if last_not_mapped < seeds.start + seeds.len {
         new_seeds.push(Seeds {
             start: last_not_mapped,
             len: seeds.start + seeds.len - last_not_mapped,
         })
     }
-
-    println!("mapped seeds:\n{:?}", new_seeds);
 
     new_seeds
 }

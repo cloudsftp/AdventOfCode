@@ -5,6 +5,7 @@ extern crate test;
 use std::{
     fs::File,
     io::{BufRead, Read},
+    ops::IndexMut,
     str::{Lines, SplitAsciiWhitespace},
     u32, u64,
 };
@@ -34,10 +35,22 @@ fn main() {
 fn run(content: &str) -> u32 {
     let rounds = parse(content);
 
-    println!("{:?}", rounds);
-
-    0
+    rounds.iter().map(number_of_ways_to_win).product()
 }
+
+fn number_of_ways_to_win(round: &Round) -> u32 {
+    (0..round.time).filter(|t| will_win(t, round)).count() as u32
+}
+
+fn will_win(hold_time: &u32, round: &Round) -> bool {
+    let speed = hold_time;
+    let travel_time = round.time - hold_time;
+    let our_dist = travel_time * speed;
+
+    our_dist > round.dist
+}
+
+// Parsing
 
 fn parse(content: &str) -> Vec<Round> {
     let mut lines = content.lines();
@@ -58,7 +71,7 @@ fn parse_line<'a>(line: &'a str) -> Box<dyn Iterator<Item = u32> + 'a> {
     }))
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 struct Round {
     time: u32,
     dist: u32,
@@ -80,10 +93,9 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content);
-        assert_eq!(result, 35)
+        assert_eq!(result, 288)
     }
 
-    /*
     #[test]
     fn test_long() {
         let file = "long_data";
@@ -104,5 +116,4 @@ mod tests {
 
         b.iter(|| run(&content));
     }
-    */
 }
