@@ -2,13 +2,7 @@
 
 extern crate test;
 
-use std::{
-    fs::File,
-    io::{BufRead, Read},
-    ops::IndexMut,
-    str::{Lines, SplitAsciiWhitespace},
-    u32, u64,
-};
+use std::{fs::File, io::Read};
 
 use clap::Parser;
 
@@ -32,17 +26,18 @@ fn main() {
     println!("{}", result)
 }
 
-fn run(content: &str) -> u32 {
+fn run(content: &str) -> u64 {
     let rounds = parse(content);
+    let round = rounds.get(0).expect("should parse exactly one round");
 
-    rounds.iter().map(number_of_ways_to_win).product()
+    number_of_ways_to_win(round)
 }
 
-fn number_of_ways_to_win(round: &Round) -> u32 {
-    (0..round.time).filter(|t| will_win(t, round)).count() as u32
+fn number_of_ways_to_win(round: &Round) -> u64 {
+    (0..round.time).filter(|t| will_win(t, round)).count() as u64
 }
 
-fn will_win(hold_time: &u32, round: &Round) -> bool {
+fn will_win(hold_time: &u64, round: &Round) -> bool {
     let speed = hold_time;
     let travel_time = round.time - hold_time;
     let our_dist = travel_time * speed;
@@ -64,17 +59,17 @@ fn parse(content: &str) -> Vec<Round> {
         .collect()
 }
 
-fn parse_line<'a>(line: &'a str) -> Box<dyn Iterator<Item = u32> + 'a> {
+fn parse_line<'a>(line: &'a str) -> Box<dyn Iterator<Item = u64> + 'a> {
     Box::new(line.split_ascii_whitespace().skip(1).map(|p| {
-        p.parse::<u32>()
+        p.parse::<u64>()
             .expect("parts should consist of digits only")
     }))
 }
 
 #[derive(Debug, Clone, Copy)]
 struct Round {
-    time: u32,
-    dist: u32,
+    time: u64,
+    dist: u64,
 }
 
 // testing
@@ -93,7 +88,7 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content);
-        assert_eq!(result, 288)
+        assert_eq!(result, 71503)
     }
 
     #[test]
@@ -104,7 +99,7 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content);
-        assert_eq!(result, 781200)
+        assert_eq!(result, 323142486)
     }
 
     #[bench]
