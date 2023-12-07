@@ -37,10 +37,6 @@ fn run(content: &str) -> u64 {
     let mut hands = parse(content);
     hands.sort();
 
-    for hand in &hands {
-        println!("{:?}", hand);
-    }
-
     hands
         .iter()
         .enumerate()
