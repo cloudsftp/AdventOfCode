@@ -33,12 +33,10 @@ fn run(content: &str) -> i64 {
         .fold(seeds, apply_maps)
         .into_iter()
         .map(|s| s.start)
-        //.inspect(|s| println!("{:?}", s))
         .min()
         .expect("resulting vector should have at least one element")
 }
 fn apply_maps(seeds: Vec<Seeds>, maps: &Vec<IngredientMap>) -> Vec<Seeds> {
-    println!("\n\n\n#################################\nmaps:\n{:?}", maps);
     seeds
         .into_iter()
         .map(|s| apply_maps_single(s, maps))

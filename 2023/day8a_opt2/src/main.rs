@@ -31,9 +31,9 @@ fn run(content: &str) -> u64 {
     let (instructions, edges) = parse(content);
 
     let mut count = 0;
-    let mut curr_node = 0;
-    while curr_node != edges.len() - 1 {
-        curr_node = instructions.iter().fold(curr_node, |node, i| {
+    let mut node = 0;
+    while node != edges.len() - 1 {
+        node = instructions.iter().fold(node, |node, i| {
             let edge = edges
                 .get(node)
                 .expect("curr_node should always exist in the mapping");
