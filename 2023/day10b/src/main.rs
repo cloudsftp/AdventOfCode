@@ -27,12 +27,143 @@ fn main() {
 }
 
 fn run(content: &str) -> usize {
+    println!("{}", content);
     let tiles = parse(content);
 
-    let start = get_starting_position(&tiles);
-    let length = walk(&tiles, start);
+    let pipe_loop = walk_loop(&tiles);
+    get_enclosed(&tiles, pipe_loop)
+}
 
-    length / 2
+// Enclosed
+fn get_enclosed(tiles: &Tiles, pipe_loop: Vec<(Direction, Position)>) -> usize {
+    let height = tiles.len();
+    let width = tiles[0].len();
+
+    let (vert_blocks, hor_blocks) = compute_blocks(pipe_loop, height, width);
+    let mut corners = vec![vec![true; width + 1]; height + 1];
+    walk_corners(&mut corners, &vert_blocks, &hor_blocks);
+
+    // print_corners(&corners, &vert_blocks, &hor_blocks);
+
+    (0..height)
+        .map(|y| {
+            (0..width)
+                .filter(|x| {
+                    let x = *x;
+                    corners[y][x] && corners[y][x + 1] && corners[y + 1][x] && corners[y + 1][x + 1]
+                })
+                .count()
+        })
+        .sum()
+}
+
+fn print_corners(
+    corners: &Vec<Vec<bool>>,
+    vert_blocks: &Vec<Vec<bool>>,
+    hor_blocks: &Vec<Vec<bool>>,
+) {
+    corners
+        .iter()
+        .skip(1)
+        .zip(hor_blocks.iter())
+        .zip(vert_blocks.iter())
+        .for_each(|((row_cor, row_vert), row_hor)| {
+            print!("  ");
+            row_hor
+                .iter()
+                .for_each(|b| if *b { print!("--") } else { print!("  ") });
+            println!();
+            row_cor.iter().zip(row_vert.iter()).for_each(|(c, b)| {
+                if *c {
+                    print!(".")
+                } else {
+                    print!(" ")
+                }
+                if *b {
+                    print!("|")
+                } else {
+                    print!(" ")
+                }
+            });
+            println!();
+        });
+    println!();
+}
+
+fn compute_blocks(
+    pipe_loop: Vec<(Direction, Position)>,
+    height: usize,
+    width: usize,
+) -> (Vec<Vec<bool>>, Vec<Vec<bool>>) {
+    let mut vert_blocks = vec![vec![false; width - 1]; height];
+    let mut hor_blocks = vec![vec![false; width]; height - 1];
+
+    for (dir, Position { x, y }) in pipe_loop {
+        match dir {
+            Direction::Up => hor_blocks[y][x] = true,
+            Direction::Right => vert_blocks[y][x - 1] = true,
+            Direction::Down => hor_blocks[y - 1][x] = true,
+            Direction::Left => vert_blocks[y][x] = true,
+        }
+    }
+
+    (vert_blocks, hor_blocks)
+}
+
+fn walk_corners(
+    corners: &mut Vec<Vec<bool>>,
+    vert_blocks: &Vec<Vec<bool>>,
+    hor_blocks: &Vec<Vec<bool>>,
+) {
+    walk_corners_rec(corners, vert_blocks, hor_blocks, Position { x: 0, y: 0 })
+}
+
+fn walk_corners_rec(
+    corners: &mut Vec<Vec<bool>>,
+    vert_blocks: &Vec<Vec<bool>>,
+    hor_blocks: &Vec<Vec<bool>>,
+    Position { x, y }: Position,
+) {
+    if !corners[y][x] {
+        return;
+    }
+    corners[y][x] = false;
+
+    let last_row = corners.len() - 1;
+    let last_col = corners[0].len() - 1;
+
+    // Step up
+    if y > 0 && (x == 0 || x == last_col || !vert_blocks[y - 1][x - 1]) {
+        walk_corners_rec(corners, vert_blocks, hor_blocks, Position { x, y: y - 1 })
+    }
+    // Step right
+    if x < last_col && (y == 0 || y == last_row || !hor_blocks[y - 1][x]) {
+        walk_corners_rec(corners, vert_blocks, hor_blocks, Position { x: x + 1, y })
+    }
+    // Step down
+    if y < last_row && (x == 0 || x == last_col || !vert_blocks[y][x - 1]) {
+        walk_corners_rec(corners, vert_blocks, hor_blocks, Position { x, y: y + 1 })
+    }
+    // Step left
+    if x > 0 && (y == 0 || y == last_row || !hor_blocks[y - 1][x - 1]) {
+        walk_corners_rec(corners, vert_blocks, hor_blocks, Position { x: x - 1, y })
+    }
+}
+
+// Loop
+
+fn walk_loop(tiles: &Tiles) -> Vec<(Direction, Position)> {
+    let start = get_starting_position(&tiles);
+
+    let (mut dir, mut curr) = first_step_loop(tiles, &start);
+    let mut pipe_loop = vec![(dir.clone(), curr.clone())];
+
+    while tiles[curr.y][curr.x] != Tile::Start {
+        (dir, curr) = step_loop(tiles, curr, dir);
+        pipe_loop.push((dir.clone(), curr.clone()));
+    }
+
+    pipe_loop
 }
 
 fn get_starting_position(tiles: &Tiles) -> Position {
@@ -49,19 +180,7 @@ fn get_starting_position(tiles: &Tiles) -> Position {
         .expect("didn't find a starting tile")
 }
 
-fn walk(tiles: &Tiles, start: Position) -> usize {
-    let (mut dir, mut curr) = get_connecting(tiles, &start);
-    let mut len = 1;
-
-    while tiles[curr.y][curr.x] != Tile::Start {
-        (dir, curr) = step(tiles, curr, dir);
-        len += 1;
-    }
-
-    len + 1
-}
-
-fn step(tiles: &Tiles, Position { x, y }: Position, dir: Direction) -> (Direction, Position) {
+fn step_loop(tiles: &Tiles, Position { x, y }: Position, dir: Direction) -> (Direction, Position) {
     let calc_result = |dir: Direction| -> (Direction, Position) {
         let (x, y) = match dir {
             Direction::Up => (x, y.checked_sub(1).expect("can't go up from here")),
@@ -115,7 +234,7 @@ fn step(tiles: &Tiles, Position { x, y }: Position, dir: Direction) -> (Directio
     }
 }
 
-fn get_connecting(tiles: &Tiles, Position { x, y }: &Position) -> (Direction, Position) {
+fn first_step_loop(tiles: &Tiles, Position { x, y }: &Position) -> (Direction, Position) {
     let x = *x;
     let y = *y;
 
@@ -134,7 +253,7 @@ fn get_connecting(tiles: &Tiles, Position { x, y }: &Position) -> (Direction, Po
 
 type Tiles = Vec<Vec<Tile>>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 struct Position {
     x: usize,
     y: usize,
@@ -175,7 +294,7 @@ impl Tile {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum Direction {
     Up,
     Right,
@@ -217,6 +336,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_mini() {
+        let file = "mini_data";
+        let mut file = File::open(file).unwrap();
+        let mut content = String::new();
+        file.read_to_string(&mut content).unwrap();
+
+        let result = run(&content);
+        assert_eq!(result, 1)
+    }
+
+    #[test]
     fn test_short() {
         let file = "short_data";
         let mut file = File::open(file).unwrap();
@@ -224,7 +354,18 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content);
-        assert_eq!(result, 8)
+        assert_eq!(result, 4)
+    }
+
+    #[test]
+    fn test_medium() {
+        let file = "medium_data";
+        let mut file = File::open(file).unwrap();
+        let mut content = String::new();
+        file.read_to_string(&mut content).unwrap();
+
+        let result = run(&content);
+        assert_eq!(result, 10)
     }
 
     #[test]
@@ -235,7 +376,7 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content);
-        assert_eq!(result, 6831)
+        assert_eq!(result, 305)
     }
 
     #[bench]
