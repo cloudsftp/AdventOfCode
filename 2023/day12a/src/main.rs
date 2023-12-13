@@ -7,8 +7,6 @@ use std::{fs::File, io::Read, str::FromStr, usize};
 use anyhow::{anyhow, Error};
 use clap::Parser;
 
-use iter_tools::Itertools;
-
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -35,43 +33,51 @@ fn run(content: &str) -> usize {
     records
         .into_iter()
         .map(|record| process(&record.conditions, &record.groups))
-        .take(1)
         .sum()
 }
 
 fn process(conditions: &[Condition], groups: &[usize]) -> usize {
-    if conditions.contains(&Condition::Operational) {
+    println!("####\nprocessing: {:?} ({:?})", conditions, groups);
+
+    let res = if conditions.contains(&Condition::Operational) {
         split_chunks(conditions, groups)
     } else {
         recurse_conditions(conditions, groups)
-    }
+    };
+
+    println!("+ -> {}", res);
+
+    res
 }
 
 fn recurse_conditions(conditions: &[Condition], groups: &[usize]) -> usize {
-    println!("####\nrecursing on: {:?} ({:?})", conditions, groups);
+    println!("recursing on: {:?} ({:?})", conditions, groups);
 
     if groups.is_empty() {
-        if conditions.is_empty()
-            || conditions
-                .into_iter()
-                .all_equal_value()
-                .is_ok_and(|c| c == &Condition::Unknown)
-        {
-            1
-        } else {
+        println!("returning possible");
+        if conditions.iter().any(|c| *c == Condition::Damaged) {
             0
+        } else {
+            1
         }
     } else {
         match conditions {
             [] => 0, // groups are non-empty at this point
             [Condition::Damaged, rest @ ..] => {
-                let first_group = groups[0];
-                if rest.len() < first_group - 1
-                    || (first_group - 1 < rest.len() && rest[first_group - 1] != Condition::Unknown)
+                let first_group = groups[0] - 1;
+                if first_group > rest.len()
+                    || (first_group < rest.len() && rest[first_group] != Condition::Unknown)
                 {
                     0
+                } else if first_group == rest.len() {
+                    if groups.len() == 1 {
+                        println!("returning possible");
+                        1
+                    } else {
+                        0
+                    }
                 } else {
-                    recurse_conditions(&conditions[first_group..], &groups[1..])
+                    recurse_conditions(&rest[first_group + 1..], &groups[1..])
                 }
             }
             [Condition::Unknown, rest @ ..] => {
@@ -88,7 +94,54 @@ fn recurse_conditions(conditions: &[Condition], groups: &[usize]) -> usize {
 }
 
 fn split_chunks(conditions: &[Condition], groups: &[usize]) -> usize {
-    0
+    let condition_chunks: Vec<&[Condition]> = conditions
+        .split(|c| *c == Condition::Operational)
+        .filter(|chunk| !chunk.is_empty())
+        .collect();
+
+    println!("chunks: {:?}", condition_chunks);
+
+    let mut res = 0;
+    on_all_k_splits(
+        &mut vec![],
+        groups,
+        condition_chunks.len(),
+        &mut |group_split| {
+            let s = condition_chunks
+                .iter()
+                .zip(group_split.iter())
+                .map(|(conditions, groups)| recurse_conditions(conditions, groups))
+                //.map(|p| p.max(1))
+                .inspect(|f| println!("factor: {}", f))
+                .product::<usize>();
+
+            println!("* -> {}", s);
+
+            res += s
+        },
+    );
+
+    res
+}
+
+// based on:
+// https://stackoverflow.com/questions/62486128/how-to-iterate-over-all-possible-partitions-of-a-slice-non-empty-subslices
+fn on_all_k_splits<'a, F>(head: &mut Vec<&'a [usize]>, rest: &'a [usize], k: usize, f: &mut F)
+where
+    F: FnMut(&[&[usize]]),
+{
+    if k == 1 {
+        head.push(rest);
+        f(head);
+        head.pop();
+    } else {
+        for i in 0..=rest.len() {
+            let (next, tail) = rest.split_at(i);
+            head.push(next);
+            on_all_k_splits(head, tail, k - 1, f);
+            head.pop();
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Hash)]
@@ -148,7 +201,6 @@ mod tests {
 
     use super::*;
 
-    /*
     #[test]
     fn test_short() {
         let file = "short_data";
@@ -180,14 +232,9 @@ mod tests {
 
         b.iter(|| run(&content));
     }
-    */
 
     #[test]
     fn test_process_record_one_chunk() {
-        let conditions = vec![Condition::Damaged];
-        let groups = vec![1];
-        assert_eq!(process(&conditions, &groups), 1);
-
         let conditions = vec![Condition::Damaged, Condition::Unknown];
         let groups = vec![1];
         assert_eq!(process(&conditions, &groups), 1);
@@ -202,6 +249,38 @@ mod tests {
 
         let conditions = vec![Condition::Unknown, Condition::Unknown, Condition::Damaged];
         let groups = vec![2];
+        assert_eq!(process(&conditions, &groups), 1);
+
+        let conditions = vec![Condition::Unknown, Condition::Unknown, Condition::Unknown];
+        let groups = vec![1, 1, 3];
+        assert_eq!(process(&conditions, &groups), 0);
+
+        let conditions = vec![Condition::Damaged];
+        let groups = vec![];
+        assert_eq!(process(&conditions, &groups), 0);
+    }
+
+    #[test]
+    fn test_process_record_two_chunk() {
+        let conditions = vec![
+            Condition::Unknown,
+            Condition::Operational,
+            Condition::Operational,
+            Condition::Unknown,
+        ];
+        let groups = vec![1];
+        assert_eq!(process(&conditions, &groups), 2);
+
+        let conditions = vec![
+            Condition::Unknown,
+            Condition::Unknown,
+            Condition::Unknown,
+            Condition::Operational,
+            Condition::Damaged,
+            Condition::Damaged,
+            Condition::Damaged,
+        ];
+        let groups = vec![1, 1, 3];
         assert_eq!(process(&conditions, &groups), 1);
     }
 }
