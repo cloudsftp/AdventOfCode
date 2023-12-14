@@ -42,6 +42,8 @@ fn process(field: Field) -> i64 {
     let mut field = field;
 
     for i in 0..1_000_000_000 {
+        println!("{}", field);
+
         let new_field = spin_cycle(&field);
         if field == new_field {
             field = new_field;
@@ -49,6 +51,9 @@ fn process(field: Field) -> i64 {
         }
 
         field = new_field;
+        if i > 100 {
+            panic!()
+        }
 
         if i % 1_000 == 0 {
             println!("---- {}", i)
@@ -79,8 +84,8 @@ fn roll_field(field: &Field, dir: Direction) -> Field {
     let slices = match dir {
         Direction::North => get_cols(field, |y| y),
         Direction::South => get_cols(field, |y| field.height as i64 - y - 1),
-        Direction::East => get_rows(field, |x| x),
-        Direction::West => get_rows(field, |x| field.width as i64 - x - 1),
+        Direction::West => get_rows(field, |x| x),
+        Direction::East => get_rows(field, |x| field.width as i64 - x - 1),
     };
 
     let chunks = slices.into_iter().map(get_rolling_chunks).collect();
@@ -90,15 +95,15 @@ fn roll_field(field: &Field, dir: Direction) -> Field {
         Direction::South => {
             reconstruct_field_from_cols(chunks, |y| field.height as i64 - y - 1, field)
         }
-        Direction::East => reconstruct_field_from_rows(chunks, |x| x, field),
-        Direction::West => {
+        Direction::West => reconstruct_field_from_rows(chunks, |x| x, field),
+        Direction::East => {
             reconstruct_field_from_rows(chunks, |x| field.width as i64 - x - 1, field)
         }
     }
 }
 
 fn filter_relevant(
-    coordinates: &Vec<(i64, i64)>,
+    coordinates: &HashSet<(i64, i64)>,
     i: i64,
     filter_proj: fn((i64, i64)) -> i64,
     map_proj: impl Fn((i64, i64)) -> i64,
@@ -145,7 +150,9 @@ fn get_rows(field: &Field, proj: impl Fn(i64) -> i64) -> Vec<Slice> {
         .collect()
 }
 
-fn get_rolling_chunks(slice: Slice) -> Vec<(i64, i64)> {
+fn get_rolling_chunks(mut slice: Slice) -> Vec<(i64, i64)> {
+    slice.steady.sort();
+
     let mut acc = vec![];
     let mut rolling: HashSet<i64> = slice.rolling.iter().cloned().collect();
 
@@ -168,24 +175,16 @@ fn reconstruct_field_from_cols(
     proj: impl Fn(i64) -> i64,
     field: &Field,
 ) -> Field {
-    let cols: Vec<_> = cols.into_iter().enumerate().collect();
-
-    let steady = cols
-        .iter()
-        .map(|(x, chunks)| {
-            chunks
-                .into_iter()
-                .filter_map(|(y, _)| (*y > -1).then_some((*x as i64, proj(*y))))
-        })
-        .flatten()
-        .collect();
+    let steady = field.steady.clone();
     let rolling = cols
         .iter()
+        .enumerate()
         .map(|(x, chunks)| {
             chunks
-                .into_iter()
-                .map(|(s, n)| (1..=*n).map(|i| (*x as i64, proj(s.clone() + i))))
+                .iter()
+                .map(|(s, n)| (1..=*n).map(|i| (x as i64, proj(s.clone() + i))))
                 .flatten()
+                .collect::<Vec<_>>()
         })
         .flatten()
         .collect();
@@ -203,24 +202,16 @@ fn reconstruct_field_from_rows(
     proj: impl Fn(i64) -> i64,
     field: &Field,
 ) -> Field {
-    let rows: Vec<_> = cols.into_iter().enumerate().collect();
-
-    let steady = rows
+    let steady = field.steady.clone();
+    let rolling = cols
         .iter()
+        .enumerate()
         .map(|(y, chunks)| {
             chunks
-                .into_iter()
-                .filter_map(|(x, _)| (proj(*x) > -1).then_some((proj(*x), *y as i64)))
-        })
-        .flatten()
-        .collect();
-    let rolling = rows
-        .iter()
-        .map(|(y, chunks)| {
-            chunks
-                .into_iter()
-                .map(|(s, n)| (1..=*n).map(|i| (proj(s.clone() + i), *y as i64)))
+                .iter()
+                .map(|(s, n)| (1..=*n).map(|i| (proj(s.clone() + i), y as i64)))
                 .flatten()
+                .collect::<Vec<_>>()
         })
         .flatten()
         .collect();
@@ -235,8 +226,8 @@ fn reconstruct_field_from_rows(
 
 #[derive(Debug, PartialEq, Eq)]
 struct Field {
-    steady: Vec<(i64, i64)>,
-    rolling: Vec<(i64, i64)>,
+    steady: HashSet<(i64, i64)>,
+    rolling: HashSet<(i64, i64)>,
     height: usize,
     width: usize,
 }
@@ -362,18 +353,9 @@ mod tests {
     */
 
     #[test]
-    fn test_rolls() {
-        let field = Field {
-            steady: vec![],
-            rolling: vec![(0, 1)],
-            height: 2,
-            width: 1,
-        };
-
-        let field = roll_field(&field, Direction::North);
-
-        println!("{}", field);
-
-        panic!()
+    fn test_south() {
+        let field = parse(".\nO\n.\nO\n#");
+        let field = roll_field(&field, Direction::South);
+        assert_eq!(field, parse(".\n.\n.\nO\n#"));
     }
 }
