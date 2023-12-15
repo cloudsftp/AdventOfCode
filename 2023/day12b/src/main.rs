@@ -2,14 +2,7 @@
 
 extern crate test;
 
-use std::{
-    collections::{btree_map::OccupiedEntry, HashMap},
-    fs::File,
-    io::Read,
-    ops::Deref,
-    str::FromStr,
-    usize,
-};
+use std::{collections::HashMap, fs::File, io::Read, str::FromStr, usize};
 
 use anyhow::{anyhow, Error};
 use clap::Parser;
@@ -38,22 +31,21 @@ fn main() {
 fn run(content: &str) -> usize {
     let records = parse(content);
 
-    let mut cache = HashMap::new();
-
     records
         .into_iter()
-        .map(|record| process(&record.conditions, &record.groups, &mut cache))
+        .map(|record| process(&record.conditions, &record.groups))
         .inspect(|s| println!("\nprocessed one: {}\n", s))
         .sum()
 }
 
-type Cache = HashMap<(Vec<Condition>, Vec<usize>), usize>;
+type Cache = HashMap<(usize, usize), usize>;
 
-fn process(conditions: &[Condition], groups: &[usize], cache: &mut Cache) -> usize {
+fn process(conditions: &[Condition], groups: &[usize]) -> usize {
+    let mut cache = HashMap::new();
     if conditions.contains(&Condition::Operational) {
-        split_chunks(conditions, groups, cache)
+        split_chunks(conditions, groups, &mut cache)
     } else {
-        recurse_conditions(conditions, groups, cache)
+        recurse_conditions(conditions, groups, &mut cache)
     }
 }
 
@@ -98,12 +90,13 @@ fn recurse_conditions(conditions: &[Condition], groups: &[usize], cache: &mut Ca
         }
     }
 
-    let cached = cache.get(&(conditions.to_owned(), groups.to_owned()));
+    let key = (conditions.len(), groups.len());
+    let cached = cache.get(&key);
     match cached {
         Some(res) => *res,
         None => {
             let res = inner(conditions, groups, cache);
-            cache.insert((conditions.to_owned(), groups.to_owned()), res);
+            cache.insert(key, res);
             res
         }
     }
@@ -179,7 +172,7 @@ impl FromStr for Record {
     type Err = Error;
 
     fn from_str(line: &str) -> Result<Self, Self::Err> {
-        let folds = 4;
+        let folds = 5;
 
         let mut parts = line.split_ascii_whitespace();
 
