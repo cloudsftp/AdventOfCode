@@ -2,12 +2,7 @@
 
 extern crate test;
 
-use std::{
-    collections::HashSet,
-    fmt::{Display, Write},
-    fs::File,
-    io::Read,
-};
+use std::{fs::File, io::Read};
 
 use clap::Parser;
 
@@ -34,17 +29,25 @@ fn main() {
 fn run(content: &str) -> usize {
     let parts = parse(content);
 
-    parts.map(process)
+    parts.map(process).sum()
 }
 
 fn process(part: &str) -> usize {
-    0
+    part.bytes().fold(0, |acc, c| {
+        let mut acc = acc;
+
+        acc += c as usize;
+        acc *= 17;
+        acc %= 256;
+
+        acc
+    })
 }
 
 // Parsing
 
 fn parse(content: &str) -> impl Iterator<Item = &str> {
-    content.split(",")
+    content.trim().split(",")
 }
 
 // testing
@@ -67,7 +70,6 @@ mod tests {
         assert_eq!(result, 1320)
     }
 
-    /*
     #[test]
     fn test_long() {
         let file = "long_data";
@@ -76,7 +78,7 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content);
-        assert_eq!(result, 104409)
+        assert_eq!(result, 498538)
     }
 
     #[bench]
@@ -88,5 +90,4 @@ mod tests {
 
         b.iter(|| run(&content));
     }
-    */
 }
