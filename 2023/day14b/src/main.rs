@@ -8,6 +8,7 @@ use std::{
     fs::File,
     i64,
     io::Read,
+    usize,
 };
 
 use clap::Parser;
@@ -40,24 +41,26 @@ fn run(content: &str) -> i64 {
 
 fn process(field: Field) -> i64 {
     let mut field = field;
+    let mut history = vec![];
 
-    for i in 0..1_000_000_000 {
-        println!("{}", field);
-
+    let mut i: usize = 0;
+    let cycle_length = loop {
         let new_field = spin_cycle(&field);
-        if field == new_field {
-            field = new_field;
-            break;
-        }
+
+        history.push(field);
+        i += 1;
 
         field = new_field;
-        if i > 100 {
-            panic!()
-        }
 
-        if i % 1_000 == 0 {
-            println!("---- {}", i)
+        let match_index = history.iter().position(|h| *h == field);
+        if let Some(match_index) = match_index {
+            break i.abs_diff(match_index);
         }
+    };
+
+    let n = (1_000_000_000 - i) % cycle_length;
+    for _ in 0..n {
+        field = spin_cycle(&field);
     }
 
     field.score()
@@ -318,7 +321,6 @@ mod tests {
 
     use super::*;
 
-    /*
     #[test]
     fn test_short() {
         let file = "short_data";
@@ -338,7 +340,7 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content);
-        assert_eq!(result, 113486)
+        assert_eq!(result, 104409)
     }
 
     #[bench]
@@ -349,13 +351,5 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         b.iter(|| run(&content));
-    }
-    */
-
-    #[test]
-    fn test_south() {
-        let field = parse(".\nO\n.\nO\n#");
-        let field = roll_field(&field, Direction::South);
-        assert_eq!(field, parse(".\n.\n.\nO\n#"));
     }
 }
