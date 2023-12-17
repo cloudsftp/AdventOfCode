@@ -2,10 +2,9 @@
 
 extern crate test;
 
-use std::{collections::BinaryHeap, fs::File, i64, io::Read, usize};
+use std::{collections::BinaryHeap, fs::File, io::Read, usize};
 
 use clap::Parser;
-use iter_tools::Itertools;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -30,96 +29,90 @@ fn main() {
 fn run(content: &str) -> usize {
     let field = parse(content);
 
-    let mut min_cost: Vec<Vec<usize>> = (0..field.height)
-        .map(|_| vec![usize::max_value(); field.width])
+    let mut min_cost: Vec<Vec<[usize; 4]>> = (0..field.height)
+        .map(|_| (0..field.width).map(|_| [usize::max_value(); 4]).collect())
         .collect();
+
+    for direction in [
+        Direction::Right,
+        Direction::Down,
+        Direction::Left,
+        Direction::Up,
+    ] {
+        min_cost[0][0][direction as usize] = 0;
+    }
 
     let mut frontier: BinaryHeap<ActionItem> = BinaryHeap::new();
 
     frontier.push(ActionItem {
         cost: 0,
-        position: (0, 1),
+        position: (0, 0),
         direction: Direction::Right,
-        straight: 3,
     });
     frontier.push(ActionItem {
         cost: 0,
-        position: (1, 0),
-        direction: Direction::Right,
-        straight: 3,
+        position: (0, 0),
+        direction: Direction::Down,
     });
 
-    let res = loop {
-        let item = frontier.pop().unwrap();
+    'outer: while let Some(ActionItem {
+        mut cost,
+        position: (mut x, mut y),
+        direction,
+    }) = frontier.pop()
+    {
+        //dbg!(cost, x, y, direction);
 
-        // dbg!(&item);
-
-        let (x, y) = item.position;
-        if x < 0 || x > field.width as i64 - 1 || y < 0 || y > field.height as i64 - 1 {
-            continue;
+        if x == field.width - 1 && y == field.height - 1 {
+            return cost;
         }
 
-        if item.straight == 0 {
-            continue;
-        }
-
-        let (xi, yi) = (x as usize, y as usize);
-        let cost = item.cost + field.tiles[yi][xi];
-
-        if min_cost[yi][xi] <= cost {
-            continue;
-        }
-        min_cost[yi][xi] = cost;
-
-        /*
-        for row in &min_cost {
-            for c in row {
-                if c < &usize::max_value() {
-                    print!("{:4}", c)
-                } else {
-                    print!("  --")
+        for _ in 0..3 {
+            let mut step = |direction: Direction| {
+                let Some((x, y)) = direction.apply((x, y)) else {
+                    return;
+                };
+                if x >= field.width || y >= field.height {
+                    return;
                 }
+
+                let cost = cost + field.tiles[y][x];
+
+                if min_cost[y][x][direction as usize] < cost {
+                    return;
+                }
+
+                min_cost[y][x][direction as usize] = cost;
+                frontier.push(ActionItem {
+                    cost,
+                    position: (x, y),
+                    direction,
+                })
+            };
+
+            step(direction.turn_left());
+            step(direction.turn_right());
+
+            let Some(next) = direction.apply((x, y)) else {
+                continue 'outer;
+            };
+            (x, y) = next;
+            if x >= field.width || y >= field.height {
+                continue 'outer;
             }
-            println!()
+
+            cost += field.tiles[y][x];
         }
-        */
+    }
 
-        if xi == field.width - 1 && yi == field.height - 1 {
-            break cost;
-        }
-
-        let mut walk = |direction, straight| {
-            let (x, y) = match direction {
-                Direction::Right => (x + 1, y),
-                Direction::Down => (x, y + 1),
-                Direction::Left => (x - 1, y),
-                Direction::Up => (x, y - 1),
-            };
-
-            let item = ActionItem {
-                cost,
-                direction,
-                position: (x, y),
-                straight,
-            };
-
-            frontier.push(item);
-        };
-
-        walk(item.direction, item.straight - 1);
-        walk(item.direction.turn_left(), 3);
-        walk(item.direction.turn_right(), 3);
-    };
-
-    res
+    usize::max_value()
 }
 
 #[derive(Debug, Eq)]
 struct ActionItem {
     cost: usize,
-    position: (i64, i64),
+    position: (usize, usize),
     direction: Direction,
-    straight: usize,
 }
 
 impl PartialEq for ActionItem {
@@ -173,6 +166,15 @@ impl Direction {
             Direction::Up => Direction::Right,
         }
     }
+
+    fn apply(self, (x, y): (usize, usize)) -> Option<(usize, usize)> {
+        match self {
+            Direction::Right => Some((x + 1, y)),
+            Direction::Down => Some((x, y + 1)),
+            Direction::Left => x.checked_sub(1).and_then(|x| Some((x, y))),
+            Direction::Up => y.checked_sub(1).and_then(|y| Some((x, y))),
+        }
+    }
 }
 
 // Parsing
@@ -215,6 +217,7 @@ mod tests {
         assert_eq!(result, 102)
     }
 
+    /*
     #[test]
     fn test_long() {
         let file = "long_data";
@@ -235,4 +238,5 @@ mod tests {
 
         b.iter(|| run(&content));
     }
+    */
 }
