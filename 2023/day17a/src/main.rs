@@ -2,9 +2,10 @@
 
 extern crate test;
 
-use std::{fs::File, i64, io::Read, usize};
+use std::{collections::BinaryHeap, fs::File, i64, io::Read, usize};
 
 use clap::Parser;
+use iter_tools::Itertools;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -29,75 +30,114 @@ fn main() {
 fn run(content: &str) -> usize {
     let field = parse(content);
 
-    let mut min_cost = (0..field.height)
+    let mut min_cost: Vec<Vec<usize>> = (0..field.height)
         .map(|_| vec![usize::max_value(); field.width])
         .collect();
 
-    let res = walk(&mut min_cost, 0, (0, 1), Direction::Right, 3, &field).min(walk(
-        &mut min_cost,
-        0,
-        (1, 0),
-        Direction::Down,
-        3,
-        &field,
-    ));
+    let mut frontier: BinaryHeap<ActionItem> = BinaryHeap::new();
 
-    for row in min_cost {
-        for c in row {
-            print!("{:4}", c)
+    frontier.push(ActionItem {
+        cost: 0,
+        position: (0, 1),
+        direction: Direction::Right,
+        straight: 3,
+    });
+    frontier.push(ActionItem {
+        cost: 0,
+        position: (1, 0),
+        direction: Direction::Right,
+        straight: 3,
+    });
+
+    let res = loop {
+        let item = frontier.pop().unwrap();
+
+        // dbg!(&item);
+
+        let (x, y) = item.position;
+        if x < 0 || x > field.width as i64 - 1 || y < 0 || y > field.height as i64 - 1 {
+            continue;
         }
-        println!()
-    }
+
+        if item.straight == 0 {
+            continue;
+        }
+
+        let (xi, yi) = (x as usize, y as usize);
+        let cost = item.cost + field.tiles[yi][xi];
+
+        if min_cost[yi][xi] <= cost {
+            continue;
+        }
+        min_cost[yi][xi] = cost;
+
+        /*
+        for row in &min_cost {
+            for c in row {
+                if c < &usize::max_value() {
+                    print!("{:4}", c)
+                } else {
+                    print!("  --")
+                }
+            }
+            println!()
+        }
+        */
+
+        if xi == field.width - 1 && yi == field.height - 1 {
+            break cost;
+        }
+
+        let mut walk = |direction, straight| {
+            let (x, y) = match direction {
+                Direction::Right => (x + 1, y),
+                Direction::Down => (x, y + 1),
+                Direction::Left => (x - 1, y),
+                Direction::Up => (x, y - 1),
+            };
+
+            let item = ActionItem {
+                cost,
+                direction,
+                position: (x, y),
+                straight,
+            };
+
+            frontier.push(item);
+        };
+
+        walk(item.direction, item.straight - 1);
+        walk(item.direction.turn_left(), 3);
+        walk(item.direction.turn_right(), 3);
+    };
 
     res
 }
 
-type State = Vec<Vec<usize>>;
-
-fn walk(
-    min_cost: &mut State,
-    mut cost: usize,
-    (x, y): (i64, i64),
+#[derive(Debug, Eq)]
+struct ActionItem {
+    cost: usize,
+    position: (i64, i64),
     direction: Direction,
     straight: usize,
-    field: &Field,
-) -> usize {
-    if x < 0 || x > field.width as i64 - 1 || y < 0 || y > field.height as i64 - 1 {
-        return usize::max_value();
+}
+
+impl PartialEq for ActionItem {
+    fn eq(&self, other: &Self) -> bool {
+        self.cost.eq(&other.cost)
     }
+}
 
-    if straight == 0 {
-        return usize::max_value();
+impl PartialOrd for ActionItem {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        other.cost.partial_cmp(&self.cost)
     }
+}
 
-    let (xi, yi) = (x as usize, y as usize);
-
-    if min_cost[yi][xi] < cost {
-        return usize::max_value();
+impl Ord for ActionItem {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other.cost.cmp(&self.cost)
     }
-
-    min_cost[yi][xi] = cost;
-
-    cost += field.tiles[yi][xi];
-
-    if xi == field.width - 1 && yi == field.height - 1 {
-        return cost;
-    }
-
-    let mut recurse = |direction, straight| {
-        let (x, y) = match direction {
-            Direction::Right => (x + 1, y),
-            Direction::Down => (x, y + 1),
-            Direction::Left => (x - 1, y),
-            Direction::Up => (x, y - 1),
-        };
-
-        walk(min_cost, cost, (x, y), direction, straight, field)
-    };
-
-    recurse(direction.turn_left(), 4)
-        .min(recurse(direction, straight - 1))
-        .min(recurse(direction.turn_right(), 4))
 }
 
 #[derive(Debug)]
@@ -107,7 +147,7 @@ struct Field {
     width: usize,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum Direction {
     Right,
     Down,
@@ -172,7 +212,7 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content);
-        assert_eq!(result, 100)
+        assert_eq!(result, 102)
     }
 
     #[test]
