@@ -29,8 +29,13 @@ fn main() {
 fn run(content: &str) -> usize {
     let field = parse(content);
 
-    let mut min_cost: Vec<Vec<[usize; 4]>> = (0..field.height)
-        .map(|_| (0..field.width).map(|_| [usize::max_value(); 4]).collect())
+    let mut min_cost: Vec<usize> = (0..field.height)
+        .map(|_| {
+            (0..field.width)
+                .map(|_| (0..4).map(|_| usize::max_value()))
+                .flatten()
+        })
+        .flatten()
         .collect();
 
     for direction in [
@@ -39,7 +44,7 @@ fn run(content: &str) -> usize {
         Direction::Left,
         Direction::Up,
     ] {
-        min_cost[0][0][direction as usize] = 0;
+        min_cost[direction as usize] = 0;
     }
 
     let mut frontier: BinaryHeap<ActionItem> = BinaryHeap::new();
@@ -76,13 +81,14 @@ fn run(content: &str) -> usize {
                     return;
                 }
 
-                let cost = cost + field.tiles[y][x];
+                let cost = cost + field.tiles[y * field.width + x];
 
-                if min_cost[y][x][direction as usize] < cost {
+                let min_cost_index = (y * field.width + x) * 4 + direction as usize;
+                if min_cost[min_cost_index] <= cost {
                     return;
                 }
 
-                min_cost[y][x][direction as usize] = cost;
+                min_cost[min_cost_index] = cost;
                 frontier.push(ActionItem {
                     cost,
                     position: (x, y),
@@ -101,7 +107,7 @@ fn run(content: &str) -> usize {
                 continue 'outer;
             }
 
-            cost += field.tiles[y][x];
+            cost += field.tiles[y * field.width + x];
         }
     }
 
@@ -135,7 +141,7 @@ impl Ord for ActionItem {
 
 #[derive(Debug)]
 struct Field {
-    tiles: Vec<Vec<usize>>,
+    tiles: Vec<usize>,
     height: usize,
     width: usize,
 }
@@ -182,11 +188,8 @@ impl Direction {
 fn parse(content: &str) -> Field {
     let tiles = content
         .lines()
-        .map(|line| {
-            line.chars()
-                .map(|c| c.to_digit(10).unwrap() as usize)
-                .collect()
-        })
+        .map(|line| line.chars().map(|c| c.to_digit(10).unwrap() as usize))
+        .flatten()
         .collect();
 
     let height = content.lines().count();
