@@ -2,9 +2,10 @@
 
 extern crate test;
 
-use std::{fs::File, i32, io::Read};
+use std::{fs::File, i32, io::Read, usize};
 
 use clap::Parser;
+use iter_tools::Itertools;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -83,9 +84,15 @@ fn parse(content: &str) -> Vec<Instruction> {
 
 impl From<&str> for Instruction {
     fn from(line: &str) -> Self {
-        let part = line.split_ascii_whitespace().nth(2);
+        let mut parts = line.split_ascii_whitespace();
 
-        let direction = ;
+        let direction = match parts.next().unwrap() {
+            "U" => Direction::Up,
+            "R" => Direction::Right,
+            "D" => Direction::Down,
+            "L" => Direction::Left,
+            _ => unreachable!(),
+        };
 
         let length = parts.next().unwrap().parse::<i32>().unwrap();
 

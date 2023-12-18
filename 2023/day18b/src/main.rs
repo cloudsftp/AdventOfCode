@@ -84,17 +84,17 @@ fn parse(content: &str) -> Vec<Instruction> {
 
 impl From<&str> for Instruction {
     fn from(line: &str) -> Self {
-        let mut parts = line.split_ascii_whitespace();
+        let part = line.split_ascii_whitespace().nth(2).unwrap();
 
-        let direction = match parts.next().unwrap() {
-            "U" => Direction::Up,
-            "R" => Direction::Right,
-            "D" => Direction::Down,
-            "L" => Direction::Left,
+        let direction = match &part[7..8] {
+            "3" => Direction::Up,
+            "0" => Direction::Right,
+            "1" => Direction::Down,
+            "2" => Direction::Left,
             _ => unreachable!(),
         };
 
-        let length = parts.next().unwrap().parse::<i64>().unwrap();
+        let length = i64::from_str_radix(&part[2..7], 16).unwrap();
 
         Self { direction, length }
     }
@@ -128,7 +128,7 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content);
-        assert_eq!(result, 76387)
+        assert_eq!(result, 250022188522074)
     }
 
     #[bench]
