@@ -73,27 +73,28 @@ fn run(content: &str) -> usize {
             return cost;
         }
 
-        for _ in MIN_STEPS..MAX_STEPS {
-            let mut step = |direction: Direction| {
-                let mut cost = cost;
-
-                let Some((x, y)) = (0..MIN_STEPS).fold(Some((x, y)), |pos, _| {
-                    pos.and_then(|(x, y)| {
-                        let pos = direction.apply((x, y));
-
-                        if let Some((x, y)) = pos {
-                            if x >= field.width || y >= field.height {
-                                return None;
-                            }
-                            cost += field.tiles[y * field.width + x];
+        for direction in [direction.turn_left(), direction.turn_right()] {
+            let mut cost = cost;
+            let Some((x, y)) = (0..MIN_STEPS).fold(Some((x, y)), |pos, _| {
+                pos.and_then(|(x, y)| {
+                    if let Some((x, y)) = pos {
+                        if x >= field.width || y >= field.height {
+                            return None;
                         }
+                        cost += field.tiles[y * field.width + x];
+                    }
 
-                        pos
-                    })
-                }) else {
-                    return;
-                };
+                    pos
+                })
+            }) else {
+                continue;
+            };
 
+            let mut step = || {
+                let pos = direction.apply((x, y));
+            };
+
+            let mut visit = || {
                 let min_cost_index = (y * field.width + x) * 4 + direction as usize;
                 if min_cost[min_cost_index] <= cost {
                     return;
@@ -107,18 +108,19 @@ fn run(content: &str) -> usize {
                 })
             };
 
-            step(direction.turn_left());
-            step(direction.turn_right());
+            for _ in 0..MIN_STEPS {}
 
-            let Some(next) = direction.apply((x, y)) else {
-                continue 'outer;
-            };
-            (x, y) = next;
-            if x >= field.width || y >= field.height {
-                continue 'outer;
+            for _ in MIN_STEPS..MAX_STEPS {
+                let Some(next) = direction.apply((x, y)) else {
+                    continue 'outer;
+                };
+                (x, y) = next;
+                if x >= field.width || y >= field.height {
+                    continue 'outer;
+                }
+
+                cost += field.tiles[y * field.width + x];
             }
-
-            cost += field.tiles[y * field.width + x];
         }
     }
 

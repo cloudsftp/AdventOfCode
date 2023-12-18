@@ -66,8 +66,6 @@ fn run(content: &str) -> usize {
         direction,
     }) = frontier.pop()
     {
-        //dbg!(cost, x, y, direction);
-
         if x == field.width - 1 && y == field.height - 1 {
             return cost;
         }
@@ -220,7 +218,6 @@ mod tests {
         assert_eq!(result, 102)
     }
 
-    /*
     #[test]
     fn test_long() {
         let file = "long_data";
@@ -229,7 +226,7 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content);
-        assert_eq!(result, 7884)
+        assert_eq!(result, 1004)
     }
 
     #[bench]
@@ -241,5 +238,4 @@ mod tests {
 
         b.iter(|| run(&content));
     }
-    */
 }
