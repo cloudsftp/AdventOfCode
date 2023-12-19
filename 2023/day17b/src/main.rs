@@ -43,11 +43,11 @@ fn run(content: &str) -> usize {
 
     for direction in [
         Direction::Right,
-        Direction::Down,
         Direction::Left,
+        Direction::Down,
         Direction::Up,
     ] {
-        min_cost[direction as usize] = 0;
+        min_cost[(direction as usize) / 1] = 0;
     }
 
     let mut frontier: BinaryHeap<ActionItem> = BinaryHeap::new();
@@ -73,53 +73,53 @@ fn run(content: &str) -> usize {
             return cost;
         }
 
-        for direction in [direction.turn_left(), direction.turn_right()] {
-            let mut cost = cost;
-            let Some((x, y)) = (0..MIN_STEPS).fold(Some((x, y)), |pos, _| {
-                pos.and_then(|(x, y)| {
-                    if let Some((x, y)) = pos {
-                        if x >= field.width || y >= field.height {
-                            return None;
-                        }
-                        cost += field.tiles[y * field.width + x];
-                    }
+        let step = |(x, y), mut cost| {
+            let pos = direction.apply((x, y));
 
-                    pos
-                })
-            }) else {
-                continue;
-            };
-
-            let mut step = || {
-                let pos = direction.apply((x, y));
-            };
-
-            let mut visit = || {
-                let min_cost_index = (y * field.width + x) * 4 + direction as usize;
-                if min_cost[min_cost_index] <= cost {
-                    return;
+            pos.and_then(|(x, y)| {
+                if x >= field.width || y >= field.height {
+                    None
+                } else {
+                    Some((x, y))
                 }
+            })
+            .map(|(x, y)| {
+                cost += field.tiles[y * field.width + x];
+                ((x, y), cost)
+            })
+        };
 
-                min_cost[min_cost_index] = cost;
+        for _ in 1..MIN_STEPS {
+            match step((x, y), cost) {
+                None => continue 'outer,
+                Some(((i, j), c)) => {
+                    (x, y) = (i, j);
+                    cost = c;
+                }
+            }
+        }
+
+        for _ in MIN_STEPS..=MAX_STEPS {
+            match step((x, y), cost) {
+                None => continue 'outer,
+                Some(((i, j), c)) => {
+                    (x, y) = (i, j);
+                    cost = c;
+                }
+            }
+
+            let min_cost_index = (y * field.width + x) * 2 + (direction as usize) / 1;
+            if min_cost[min_cost_index] <= cost {
+                continue;
+            }
+            min_cost[min_cost_index] = cost;
+
+            for direction in [direction.turn_left(), direction.turn_right()] {
                 frontier.push(ActionItem {
                     cost,
                     position: (x, y),
                     direction,
                 })
-            };
-
-            for _ in 0..MIN_STEPS {}
-
-            for _ in MIN_STEPS..MAX_STEPS {
-                let Some(next) = direction.apply((x, y)) else {
-                    continue 'outer;
-                };
-                (x, y) = next;
-                if x >= field.width || y >= field.height {
-                    continue 'outer;
-                }
-
-                cost += field.tiles[y * field.width + x];
             }
         }
     }
@@ -244,7 +244,6 @@ mod tests {
         assert_eq!(result, 71)
     }
 
-    /*
     #[test]
     fn test_long() {
         let file = "long_data";
@@ -265,5 +264,4 @@ mod tests {
 
         b.iter(|| run(&content));
     }
-    */
 }
