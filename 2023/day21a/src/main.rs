@@ -33,12 +33,23 @@ fn run(content: &str, steps: usize) -> usize {
     let (field, start) = parse(content);
 
     let mut end = HashSet::new();
-    walk(&field, &mut end, start, steps);
+    let mut seen = (0..=steps).map(|_| HashSet::new()).collect_vec();
+    walk(&field, &mut end, &mut seen, start, steps);
     end.len()
 }
 
-fn walk(field: &Field, end: &mut HashSet<Position>, (x, y): Position, steps: usize) {
-    if y >= field.len() || x >= field[0].len() || field[y][x] == Tile::Stone {
+fn walk(
+    field: &Field,
+    end: &mut HashSet<Position>,
+    seen: &mut Vec<HashSet<Position>>,
+    (x, y): Position,
+    steps: usize,
+) {
+    if y >= field.len()
+        || x >= field[0].len()
+        || field[y][x] == Tile::Stone
+        || seen[steps].contains(&(x, y))
+    {
         return;
     }
 
@@ -47,6 +58,7 @@ fn walk(field: &Field, end: &mut HashSet<Position>, (x, y): Position, steps: usi
         return;
     }
 
+    seen[steps].insert((x, y));
     let steps = steps - 1;
 
     [
@@ -59,7 +71,7 @@ fn walk(field: &Field, end: &mut HashSet<Position>, (x, y): Position, steps: usi
     .for_each(|direction| {
         direction
             .apply((x, y))
-            .map(|position| walk(field, end, position, steps));
+            .map(|position| walk(field, end, seen, position, steps));
     })
 }
 
@@ -143,7 +155,6 @@ mod tests {
         assert_eq!(result, 16)
     }
 
-    /*
     #[test]
     fn test_long() {
         let file = "long_data";
@@ -152,7 +163,7 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         let result = run(&content, 64);
-        assert_eq!(result, 807069600)
+        assert_eq!(result, 3594)
     }
 
     #[bench]
@@ -163,7 +174,5 @@ mod tests {
         file.read_to_string(&mut content).unwrap();
 
         b.iter(|| run(&content, 64));
-
     }
-    */
 }
