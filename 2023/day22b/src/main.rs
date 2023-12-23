@@ -45,7 +45,7 @@ fn chain(supporting: &Vec<Vec<usize>>, bottoms: &Vec<usize>, i: usize) -> usize 
     let mut just_fallen = HashSet::from([i]);
 
     while !just_fallen.is_empty() {
-        all_fallen.extend(just_fallen.iter());
+        all_fallen.extend(just_fallen.into_iter());
 
         just_fallen = (0..supporting.len())
             .filter(|id| !all_fallen.contains(id))
