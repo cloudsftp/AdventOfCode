@@ -66,6 +66,7 @@ fn move_files_rec(
   index: Int,
   num_files: Int,
 ) -> #(List(#(Int, Int)), List(Int)) {
+  print(files, spaces)
   case files_rev {
     [] -> #(files, spaces)
     [#(id, size), ..files_rev] -> {
@@ -91,7 +92,7 @@ fn move_files_rec(
               |> list.drop(source_pos + 1),
             )
 
-          let spaces = update_spaces(spaces, target_pos - 1, size)
+          let spaces = update_spaces(spaces, target_pos - 1, source_pos, size)
 
           move_files_rec(files, files_rev, spaces, index, num_files)
         }
@@ -100,15 +101,31 @@ fn move_files_rec(
   }
 }
 
-fn update_spaces(spaces: List(Int), pos: Int, size: Int) -> List(Int) {
-  case spaces {
-    [] -> panic
-    [first, ..spaces] if pos > 0 -> [
-      first,
-      ..update_spaces(spaces, pos - 1, size)
-    ]
-    [first, ..spaces] -> [0, first - size, ..spaces]
-  }
+fn update_spaces(
+  spaces: List(Int),
+  target_pos: Int,
+  source_pos: Int,
+  size: Int,
+) -> List(Int) {
+  use <- bool.guard(list.is_empty(spaces), [])
+
+  let assert [first, ..spaces] = spaces
+
+  use <- bool.guard(target_pos == 0, [
+    0,
+    first - size,
+    ..update_spaces(spaces, target_pos - 1, source_pos - 1, size)
+  ])
+
+  use <- bool.guard(source_pos == 2, {
+    case spaces {
+      [first, second, ..spaces] -> [first + size + second, ..spaces]
+      [last] -> [last + size]
+      [] -> [size]
+    }
+  })
+
+  [first, ..update_spaces(spaces, target_pos - 1, source_pos - 1, size)]
 }
 
 fn position_to_fit_spot(
@@ -164,6 +181,47 @@ fn split_blocks_recursive(
         0 -> #([#(index / 2, count), ..files], spaces)
         _ -> #(files, [count, ..spaces])
       }
+    }
+  }
+}
+
+fn print(files: List(#(Int, Int)), spaces: List(Int)) {
+  io.print(to_string(files, spaces, ""))
+}
+
+fn to_string(files: List(#(Int, Int)), spaces: List(Int), acc: String) -> String {
+  case files {
+    [] -> string.append(acc, "\n")
+    [#(id, size), ..files] -> {
+      let acc =
+        acc
+        |> string.append(
+          list.range(0, size - 1)
+          |> list.map(fn(_) {
+            id
+            |> int.to_string
+          })
+          |> string.concat,
+        )
+
+      let acc =
+        acc
+        |> string.append(case spaces {
+          [] -> ""
+          [space, ..] if space == 0 -> ""
+          [space, ..] -> {
+            list.range(0, space - 1)
+            |> list.map(fn(_) { "." })
+            |> string.concat
+          }
+        })
+
+      let spaces = case spaces {
+        [] -> []
+        [_, ..spaces] -> spaces
+      }
+
+      to_string(files, spaces, acc)
     }
   }
 }
