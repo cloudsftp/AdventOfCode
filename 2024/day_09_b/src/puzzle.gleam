@@ -7,179 +7,120 @@ import gleam/result
 import gleam/string
 import simplifile
 
+pub type File =
+  #(Int, Int, Int)
+
 pub fn main() {
-  let assert Ok(content) = simplifile.read("input")
+  let assert Ok(content) = simplifile.read("input.small")
 
-  let #(files, files_rev, spaces) = parse_input(content)
-  let #(files, spaces) = move_files(files, files_rev, spaces)
+  let #(files, num_files) = parse_input(content)
+  let work = files |> list.reverse
 
-  let result = checksum(files, spaces)
+  let files = move_files(work, files, num_files, 0, 0)
+  let result = files |> checksum
+
   io.debug(result)
 }
 
-fn checksum(files: List(#(Int, Int)), spaces: List(Int)) -> Int {
-  checksum_rec(files, spaces, 0, 0)
-}
+fn checksum(files: List(File)) -> Int {
+  let #(sum, _) =
+    files
+    |> list.fold(#(0, 0), fn(acc, file) {
+      let #(sum, index) = acc
+      let #(id, size, space) = file
 
-fn checksum_rec(
-  files: List(#(Int, Int)),
-  spaces: List(Int),
-  index: Int,
-  acc: Int,
-) -> Int {
-  case files {
-    [] -> acc
-    [#(id, size), ..rest] -> {
       let delta =
         list.range(index, index + size - 1)
         |> list.map(fn(index) { index * id })
         |> int.sum
+      let sum = sum + delta
 
-      let acc = acc + delta
+      #(sum, index + size + space)
+    })
 
-      let assert [space, ..spaces] = spaces
-      let index = index + size + space
-
-      checksum_rec(rest, spaces, index, acc)
-    }
-  }
+  sum
 }
 
 fn move_files(
-  files: List(#(Int, Int)),
-  files_rev: List(#(Int, Int)),
-  spaces: List(Int),
-) -> #(List(#(Int, Int)), List(Int)) {
-  move_files_rec(files, files_rev, spaces, 0, list.length(files))
-}
-
-fn move_files_rec(
-  files: List(#(Int, Int)),
-  files_rev: List(#(Int, Int)),
-  spaces: List(Int),
-  index: Int,
+  work: List(File),
+  files: List(File),
   num_files: Int,
-) -> #(List(#(Int, Int)), List(Int)) {
-  case files_rev {
-    [] -> #(files, spaces)
-    [#(id, size), ..files_rev] -> {
-      let source_pos = num_files - index - 1
-      case position_to_fit_spot(spaces, size, source_pos) {
-        option.None ->
-          move_files_rec(files, files_rev, spaces, index + 1, num_files)
-        option.Some(target_pos) -> {
-          let index =
-            bool.guard(target_pos + 1 == source_pos, index + 1, fn() { index })
+  iteration: Int,
+  num_moved: Int,
+) -> List(File) {
+  print(files)
+  use <- bool.guard(work |> list.is_empty, files)
+  let assert [file, ..work] = work
 
-          let files =
-            files
-            |> list.take(target_pos)
-            |> list.append([#(id, size)])
-            |> list.append(
-              files
-              |> list.drop(target_pos)
-              |> list.take(source_pos - target_pos),
-            )
-            |> list.append(
-              files
-              |> list.drop(source_pos + 1),
-            )
+  let source_index = num_files - iteration - 1 + num_moved
 
-          let spaces = update_spaces(spaces, target_pos, source_pos, size)
-
-          move_files_rec(files, files_rev, spaces, index, num_files)
-        }
-      }
-    }
+  let #(files, num_moved) = case find_free_space(files, file, 0, source_index) {
+    option.None -> #(files, num_moved)
+    option.Some(target_index) -> #(
+      move_file(
+        files,
+        0,
+        io.debug(target_index),
+        io.debug(source_index),
+        io.debug(file),
+      ),
+      num_moved + 1,
+    )
   }
+
+  move_files(work, files, num_files, iteration + 1, num_moved)
 }
 
-pub fn update_spaces(
-  spaces: List(Int),
-  target_pos: Int,
-  source_pos: Int,
-  size: Int,
-) -> List(Int) {
-  update_spaces_rec(spaces, 0, target_pos, source_pos, size)
+fn find_free_space(
+  files: List(File),
+  file: File,
+  iteration: Int,
+  limit: Int,
+) -> option.Option(Int) {
+  use <- bool.guard(iteration == limit, option.None)
+
+  let #(_, size, _) = file
+  let assert [#(_, _, space), ..files] = files
+
+  use <- bool.guard(size <= space, option.Some(iteration))
+
+  find_free_space(files, file, iteration + 1, limit)
 }
 
-fn update_spaces_rec(
-  spaces: List(Int),
-  count: Int,
-  target_pos: Int,
-  source_pos: Int,
-  size: Int,
-) -> List(Int) {
-  case count, spaces {
-    _, [] -> []
-    count, [first, ..rest] if count == target_pos - 1 -> [
-      0,
-      first - size,
-      ..update_spaces_rec(rest, count + 1, target_pos, source_pos, size)
+pub fn move_file(
+  files: List(File),
+  iteration: Int,
+  target: Int,
+  source: Int,
+  file: File,
+) -> List(File) {
+  let #(id_move, size_move, _) = file
+
+  use <- bool.lazy_guard(iteration == target, fn() {
+    let assert [#(id, size, space), ..files] = files
+
+    [
+      #(id, size, 0),
+      #(id_move, size_move, space - size_move),
+      ..move_file(files, iteration + 1, target, source, file)
     ]
-    count, [first, second, ..rest] if count == source_pos - 1 -> [
-      first + second + size,
-      ..rest
-    ]
-    count, [last] if count == source_pos - 1 -> [last + size]
-    count, [first, ..rest] -> [
-      first,
-      ..update_spaces_rec(rest, count + 1, target_pos, source_pos, size)
-    ]
-  }
-}
+  })
 
-pub fn update_spaces_old(
-  spaces: List(Int),
-  target_pos: Int,
-  source_pos: Int,
-  size: Int,
-) -> List(Int) {
-  use <- bool.guard(list.is_empty(spaces), [])
-
-  let assert [first, ..spaces] = spaces
-
-  use <- bool.guard(target_pos == 0, [
-    0,
-    first - size,
-    ..update_spaces(spaces, target_pos - 1, source_pos - 1, size)
-  ])
-
-  use <- bool.guard(source_pos == 1, {
-    case spaces {
-      [first, second, ..spaces] -> [first + size + second, ..spaces]
-      [last] -> [last + size]
-      [] -> [size]
+  use <- bool.lazy_guard(iteration == source - 1, fn() {
+    case files {
+      [#(id, size, space), #(_, freed_space, additional_space), ..files] -> [
+        #(id, size, space + freed_space + additional_space),
+        ..files
+      ]
+      _ -> panic
     }
   })
 
-  [first, ..update_spaces(spaces, target_pos - 1, source_pos - 1, size)]
+  let assert [first, ..rest] = files
+  [first, ..move_file(rest, iteration + 1, target, source, file)]
 }
 
-fn position_to_fit_spot(
-  spaces: List(Int),
-  size: Int,
-  limit: Int,
-) -> option.Option(Int) {
-  position_to_fit_spot_rec(spaces, size, limit, 1)
-}
-
-fn position_to_fit_spot_rec(
-  spaces: List(Int),
-  size: Int,
-  limit: Int,
-  index: Int,
-) -> option.Option(Int) {
-  use <- bool.guard(list.is_empty(spaces) || index > limit, option.None)
-
-  let assert [first, ..rest] = spaces
-  use <- bool.guard(first >= size, option.Some(index))
-  position_to_fit_spot_rec(rest, size, limit, index + 1)
-}
-
-fn parse_input(
-  content: String,
-) -> #(List(#(Int, Int)), List(#(Int, Int)), List(Int)) {
+fn parse_input(content: String) -> #(List(File), Int) {
   let assert Ok(content) =
     content
     |> string.split(on: "\n")
@@ -191,65 +132,72 @@ fn parse_input(
     |> list.map(int.parse)
     |> result.all
 
-  let #(files, spaces) = split_blocks_recursive(blocks, 0)
-  let files_rev = list.reverse(files)
-  #(files, files_rev, spaces)
-}
+  let #(file_blocks, space_blocks, length) =
+    blocks
+    |> list.index_fold(#([], [], 0), fn(acc, block, index) {
+      let #(file_blocks, space_blocks, length) = acc
 
-fn split_blocks_recursive(
-  blocks: List(Int),
-  index: Int,
-) -> #(List(#(Int, Int)), List(Int)) {
-  case blocks {
-    [] -> #([], [0])
-    [count, ..rest] -> {
-      let #(files, spaces) = split_blocks_recursive(rest, index + 1)
-
-      case index % 2 {
-        0 -> #([#(index / 2, count), ..files], spaces)
-        _ -> #(files, [count, ..spaces])
+      case index {
+        index if index % 2 == 0 -> #(
+          [block, ..file_blocks],
+          space_blocks,
+          length + 1,
+        )
+        index if index % 2 == 1 -> #(
+          file_blocks,
+          [block, ..space_blocks],
+          length,
+        )
+        _ -> panic
       }
-    }
-  }
+    })
+
+  let space_blocks =
+    space_blocks
+    |> list.prepend(0)
+
+  #(
+    file_blocks
+      |> list.zip(space_blocks)
+      |> list.index_fold([], fn(acc, pair, index) {
+        let id = length - index - 1
+        let #(file, space) = pair
+
+        acc
+        |> list.prepend(#(id, file, space))
+      }),
+    length,
+  )
 }
 
-fn print(files: List(#(Int, Int)), spaces: List(Int)) {
-  io.print(to_string(files, spaces, ""))
+fn print(files: List(File)) {
+  io.print(to_string(files, ""))
 }
 
-fn to_string(files: List(#(Int, Int)), spaces: List(Int), acc: String) -> String {
+fn to_string(files: List(File), acc: String) -> String {
   case files {
     [] -> string.append(acc, "\n")
-    [#(id, size), ..files] -> {
+    [#(id, size, space), ..files] -> {
       let acc =
         acc
         |> string.append(
           list.range(0, size - 1)
-          |> list.map(fn(_) {
-            id
-            |> int.to_string
-          })
+          |> list.map(fn(_) { id |> int.to_string })
           |> string.concat,
         )
 
-      let acc =
-        acc
-        |> string.append(case spaces {
-          [] -> ""
-          [space, ..] if space == 0 -> ""
-          [space, ..] -> {
+      let acc = case space {
+        0 -> acc
+        space ->
+          acc
+          |> string.append(
             list.range(0, space - 1)
             |> list.map(fn(_) { "." })
-            |> string.concat
-          }
-        })
-
-      let spaces = case spaces {
-        [] -> []
-        [_, ..spaces] -> spaces
+            |> string.concat,
+          )
       }
 
-      to_string(files, spaces, acc)
+      to_string(files, acc)
     }
   }
 }
