@@ -8,15 +8,12 @@ import gleam/string
 import simplifile
 
 pub fn main() {
-  let assert Ok(content) = simplifile.read("input.small")
+  let assert Ok(content) = simplifile.read("input")
 
   let #(files, files_rev, spaces) = parse_input(content)
   let #(files, spaces) = move_files(files, files_rev, spaces)
-  io.debug(files)
-  io.debug(spaces)
 
   let result = checksum(files, spaces)
-
   io.debug(result)
 }
 
@@ -33,10 +30,8 @@ fn checksum_rec(
   case files {
     [] -> acc
     [#(id, size), ..rest] -> {
-      io.debug(#(id, size))
-
       let delta =
-        io.debug(list.range(index, index + size - 1))
+        list.range(index, index + size - 1)
         |> list.map(fn(index) { index * id })
         |> int.sum
 
@@ -44,7 +39,6 @@ fn checksum_rec(
 
       let assert [space, ..spaces] = spaces
       let index = index + size + space
-      io.debug(space)
 
       checksum_rec(rest, spaces, index, acc)
     }
@@ -66,7 +60,6 @@ fn move_files_rec(
   index: Int,
   num_files: Int,
 ) -> #(List(#(Int, Int)), List(Int)) {
-  print(files, spaces)
   case files_rev {
     [] -> #(files, spaces)
     [#(id, size), ..files_rev] -> {
@@ -92,7 +85,7 @@ fn move_files_rec(
               |> list.drop(source_pos + 1),
             )
 
-          let spaces = update_spaces(spaces, target_pos - 1, source_pos, size)
+          let spaces = update_spaces(spaces, target_pos, source_pos, size)
 
           move_files_rec(files, files_rev, spaces, index, num_files)
         }
@@ -101,7 +94,42 @@ fn move_files_rec(
   }
 }
 
-fn update_spaces(
+pub fn update_spaces(
+  spaces: List(Int),
+  target_pos: Int,
+  source_pos: Int,
+  size: Int,
+) -> List(Int) {
+  update_spaces_rec(spaces, 0, target_pos, source_pos, size)
+}
+
+fn update_spaces_rec(
+  spaces: List(Int),
+  count: Int,
+  target_pos: Int,
+  source_pos: Int,
+  size: Int,
+) -> List(Int) {
+  case count, spaces {
+    _, [] -> []
+    count, [first, ..rest] if count == target_pos - 1 -> [
+      0,
+      first - size,
+      ..update_spaces_rec(rest, count + 1, target_pos, source_pos, size)
+    ]
+    count, [first, second, ..rest] if count == source_pos - 1 -> [
+      first + second + size,
+      ..rest
+    ]
+    count, [last] if count == source_pos - 1 -> [last + size]
+    count, [first, ..rest] -> [
+      first,
+      ..update_spaces_rec(rest, count + 1, target_pos, source_pos, size)
+    ]
+  }
+}
+
+pub fn update_spaces_old(
   spaces: List(Int),
   target_pos: Int,
   source_pos: Int,
@@ -117,7 +145,7 @@ fn update_spaces(
     ..update_spaces(spaces, target_pos - 1, source_pos - 1, size)
   ])
 
-  use <- bool.guard(source_pos == 2, {
+  use <- bool.guard(source_pos == 1, {
     case spaces {
       [first, second, ..spaces] -> [first + size + second, ..spaces]
       [last] -> [last + size]
@@ -173,7 +201,7 @@ fn split_blocks_recursive(
   index: Int,
 ) -> #(List(#(Int, Int)), List(Int)) {
   case blocks {
-    [] -> #([], [])
+    [] -> #([], [0])
     [count, ..rest] -> {
       let #(files, spaces) = split_blocks_recursive(rest, index + 1)
 
