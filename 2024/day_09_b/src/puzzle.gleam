@@ -11,12 +11,12 @@ pub type File =
   #(Int, Int, Int)
 
 pub fn main() {
-  let assert Ok(content) = simplifile.read("input.small")
+  let assert Ok(content) = simplifile.read("input")
 
   let #(files, num_files) = parse_input(content)
   let work = files |> list.reverse
 
-  let files = move_files(work, files, num_files, 0, 0)
+  let files = move_files(work, files, num_files, 0)
   let result = files |> checksum
 
   io.debug(result)
@@ -46,29 +46,26 @@ fn move_files(
   files: List(File),
   num_files: Int,
   iteration: Int,
-  num_moved: Int,
 ) -> List(File) {
-  print(files)
   use <- bool.guard(work |> list.is_empty, files)
   let assert [file, ..work] = work
 
-  let source_index = num_files - iteration - 1 + num_moved
+  let #(id_to_match, _, _) = file
+  let source_index =
+    files
+    |> list.fold_until(0, fn(index, file) {
+      let #(id, _, _) = file
+      use <- bool.guard(id == id_to_match, list.Stop(index))
+      list.Continue(index + 1)
+    })
 
-  let #(files, num_moved) = case find_free_space(files, file, 0, source_index) {
-    option.None -> #(files, num_moved)
-    option.Some(target_index) -> #(
-      move_file(
-        files,
-        0,
-        io.debug(target_index),
-        io.debug(source_index),
-        io.debug(file),
-      ),
-      num_moved + 1,
-    )
+  let files = case find_free_space(files, file, 0, source_index) {
+    option.None -> files
+    option.Some(target_index) ->
+      move_file(files, 0, target_index, source_index, file)
   }
 
-  move_files(work, files, num_files, iteration + 1, num_moved)
+  move_files(work, files, num_files, iteration + 1)
 }
 
 fn find_free_space(
