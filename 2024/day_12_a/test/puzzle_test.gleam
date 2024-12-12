@@ -1,3 +1,4 @@
+import gleam/io
 import gleam/list
 import gleam/set
 import gleeunit
@@ -19,8 +20,10 @@ pub fn regex_test() {
   let group = group |> set.from_list
   let subgroups = subgroups |> list.map(set.from_list)
 
-  group
-  |> puzzle.split
+  io.debug(
+    group
+    |> puzzle.split,
+  )
   |> list.all(fn(subgroup) {
     subgroups
     |> list.contains(subgroup)

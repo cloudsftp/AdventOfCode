@@ -1,3 +1,4 @@
+import gleam/bool
 import gleam/dict
 import gleam/int
 import gleam/io
@@ -10,7 +11,7 @@ type Position =
   #(Int, Int)
 
 pub fn main() {
-  let assert Ok(content) = simplifile.read("input.small")
+  let assert Ok(content) = simplifile.read("input")
 
   let plots =
     content
@@ -36,6 +37,7 @@ pub fn main() {
 
   let result =
     groups
+    |> list.fold([], fn(acc, group) { list.append(group |> split, acc) })
     |> list.map(score_group)
     |> list.map(fn(score) {
       let #(area, perimeter) = score
@@ -47,7 +49,43 @@ pub fn main() {
 }
 
 pub fn split(group: set.Set(Position)) -> List(set.Set(Position)) {
-  [group]
+  split_rec(group, [])
+}
+
+fn split_rec(
+  group: set.Set(Position),
+  subgroups: List(set.Set(Position)),
+) -> List(set.Set(Position)) {
+  use <- bool.guard(group |> set.is_empty, subgroups)
+
+  let #(group, seed) = group |> pop
+  let #(group, subgroup) = group |> find_subgroup(seed)
+
+  let subgroups = [subgroup, ..subgroups]
+  split_rec(group, subgroups)
+}
+
+fn find_subgroup(
+  group: set.Set(Position),
+  seed: Position,
+) -> #(set.Set(Position), set.Set(Position)) {
+  group |> find_subgroup_recurse(seed, set.new() |> set.insert(seed))
+}
+
+fn find_subgroup_recurse(
+  group: set.Set(Position),
+  current: Position,
+  subgroup: set.Set(Position),
+) -> #(set.Set(Position), set.Set(Position)) {
+  let #(group, neighbors) = group |> pop_neighbors(current)
+
+  neighbors
+  |> set.fold(#(group, subgroup), fn(acc, neighbor) {
+    let #(group, subgroup) = acc
+    let subgroup = subgroup |> set.insert(neighbor)
+
+    group |> find_subgroup_recurse(neighbor, subgroup)
+  })
 }
 
 fn pop(group: set.Set(Position)) -> #(set.Set(Position), Position) {
@@ -66,18 +104,17 @@ fn pop(group: set.Set(Position)) -> #(set.Set(Position), Position) {
 fn pop_neighbors(
   group: set.Set(Position),
   plot: Position,
-) -> #(set.Set(Position), List(Position)) {
+) -> #(set.Set(Position), set.Set(Position)) {
   let neighbors =
-    plot
-    |> neighbors
-    |> list.filter(fn(neighbor) {
-      group
-      |> set.contains(neighbor)
-    })
+    group
+    |> set.take(
+      plot
+      |> neighbors,
+    )
 
   let group =
     neighbors
-    |> list.fold(group, fn(group, neighbor) {
+    |> set.fold(group, fn(group, neighbor) {
       group
       |> set.delete(neighbor)
     })
