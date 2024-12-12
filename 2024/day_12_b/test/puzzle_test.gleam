@@ -34,18 +34,18 @@ pub fn regex_test() {
 pub fn get_edges_test() {
   let test_cases = [
     #([#(0, 0)], [
-      puzzle.Vert(0, 0),
-      puzzle.Hor(0, 0),
-      puzzle.Vert(0, 1),
-      puzzle.Hor(1, 0),
+      puzzle.VertLeft(0, 0),
+      puzzle.HorBelow(0, 0),
+      puzzle.VertRight(0, 0),
+      puzzle.HorAbove(0, 0),
     ]),
     #([#(0, 0), #(0, 1)], [
-      puzzle.Vert(0, 0),
-      puzzle.Hor(0, 0),
-      puzzle.Hor(0, 1),
-      puzzle.Vert(0, 2),
-      puzzle.Hor(1, 0),
-      puzzle.Hor(1, 1),
+      puzzle.VertLeft(0, 0),
+      puzzle.HorAbove(0, 0),
+      puzzle.HorBelow(0, 0),
+      puzzle.VertRight(0, 1),
+      puzzle.HorAbove(0, 1),
+      puzzle.HorBelow(0, 1),
     ]),
   ]
 

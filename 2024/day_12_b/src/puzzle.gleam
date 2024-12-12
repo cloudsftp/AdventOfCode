@@ -11,7 +11,7 @@ type Position =
   #(Int, Int)
 
 pub fn main() {
-  let assert Ok(content) = simplifile.read("input.small")
+  let assert Ok(content) = simplifile.read("input.mini")
 
   let plots =
     content
@@ -45,8 +45,10 @@ pub fn main() {
 }
 
 pub type Edge {
-  Vert(i: Int, j: Int)
-  Hor(i: Int, j: Int)
+  VertRight(i: Int, j: Int)
+  VertLeft(i: Int, j: Int)
+  HorAbove(i: Int, j: Int)
+  HorBelow(i: Int, j: Int)
 }
 
 type Direction {
@@ -66,76 +68,98 @@ pub fn score_group(group: set.Set(Position)) -> Int {
 }
 
 fn walk_edges(edges: set.Set(Edge)) -> Int {
+  let #(_, perimeter) = walk_edges_rec(edges, 0)
+  perimeter
+}
+
+fn walk_edges_rec(edges: set.Set(Edge), perimeter: Int) -> #(set.Set(Edge), Int) {
+  use <- bool.guard(edges |> set.is_empty, #(edges, perimeter))
+
   let assert Ok(edge) =
     edges
     |> set.to_list
     |> list.first
 
   let direction = case edge {
-    Vert(_, _) -> Down
-    Hor(_, _) -> Right
+    VertRight(_, _) -> Down
+    VertLeft(_, _) -> Down
+    HorAbove(_, _) -> Right
+    HorBelow(_, _) -> Right
   }
 
-  edges |> walk_edges_recurse(direction, edge, edge, 0)
+  io.debug(#(perimeter, edges))
+
+  let #(edges, delta) = edges |> walk_loops_recurse(direction, edge, edge, 0)
+  let perimeter = perimeter + delta
+
+  walk_edges_rec(edges, perimeter)
 }
 
-fn walk_edges_recurse(
+fn walk_loops_recurse(
   edges: set.Set(Edge),
   direction: Direction,
   current: Edge,
   start: Edge,
   score: Int,
-) -> Int {
+) -> #(set.Set(Edge), Int) {
+  io.debug(edges)
+  io.debug(#(current, direction))
+
   let same_direction = case current, direction {
-    Vert(i, j), Up -> Vert(i - 1, j)
-    Vert(i, j), Down -> Vert(i + 1, j)
-    Hor(i, j), Right -> Hor(i, j + 1)
-    Hor(i, j), Left -> Hor(i, j - 1)
+    VertLeft(i, j), Up -> VertLeft(i - 1, j)
+    VertRight(i, j), Up -> VertRight(i - 1, j)
+    VertLeft(i, j), Down -> VertLeft(i + 1, j)
+    VertRight(i, j), Down -> VertRight(i + 1, j)
+    HorAbove(i, j), Right -> HorAbove(i, j + 1)
+    HorBelow(i, j), Right -> HorBelow(i, j + 1)
+    HorAbove(i, j), Left -> HorAbove(i, j - 1)
+    HorBelow(i, j), Left -> HorBelow(i, j - 1)
     _, _ -> panic
   }
   use <- bool.lazy_guard(edges |> set.contains(same_direction), fn() {
-    walk_edges_recurse_guard(edges, direction, same_direction, start, score)
+    io.debug("going same direction")
+    io.debug(same_direction)
+    walk_loops_recurse_guard(edges, direction, same_direction, start, score)
   })
+
+  io.debug("could not go same direction")
 
   let score = score + 1
 
-  let #(left, new_direction) = case current, direction {
-    Vert(i, j), Up -> #(Hor(i, j - 1), Left)
-    Vert(i, j), Down -> #(Hor(i + 1, j), Right)
-    Hor(i, j), Right -> #(Vert(i - 1, j + 1), Up)
-    Hor(i, j), Left -> #(Vert(i, j), Down)
+  let #(turn, new_direction) = case current, direction {
+    // Turn left
+    VertLeft(i, j), Down -> #(HorBelow(i, j), Right)
+    VertRight(i, j), Up -> #(HorAbove(i, j), Left)
+    HorAbove(i, j), Left -> #(VertLeft(i, j), Down)
+    HorBelow(i, j), Right -> #(VertRight(i, j), Up)
+    // Turn right
+    VertLeft(i, j), Up -> #(HorAbove(i, j), Right)
+    VertRight(i, j), Down -> #(HorBelow(i, j), Left)
+    HorAbove(i, j), Right -> #(VertRight(i, j), Down)
+    HorBelow(i, j), Left -> #(VertLeft(i, j), Up)
     _, _ -> panic
   }
-  use <- bool.lazy_guard(edges |> set.contains(left), fn() {
-    walk_edges_recurse_guard(edges, new_direction, left, start, score)
-  })
-
-  let #(right, new_direction) = case current, direction {
-    Vert(i, j), Up -> #(Hor(i, j), Right)
-    Vert(i, j), Down -> #(Hor(i + 1, j - 1), Left)
-    Hor(i, j), Right -> #(Vert(i, j + 1), Down)
-    Hor(i, j), Left -> #(Vert(i - 1, j), Up)
-    _, _ -> {
-      panic
-    }
-  }
-  use <- bool.lazy_guard(edges |> set.contains(right), fn() {
-    walk_edges_recurse_guard(edges, new_direction, right, start, score)
+  use <- bool.lazy_guard(edges |> set.contains(turn), fn() {
+    io.debug(#(turn, new_direction))
+    walk_loops_recurse_guard(edges, new_direction, turn, start, score)
   })
 
   io.println_error("no connecting edge")
   panic
 }
 
-fn walk_edges_recurse_guard(
+fn walk_loops_recurse_guard(
   edges: set.Set(Edge),
   direction: Direction,
   current: Edge,
   start: Edge,
   score: Int,
-) -> Int {
-  use <- bool.guard(current == start, score)
-  walk_edges_recurse(edges, direction, current, start, score)
+) -> #(set.Set(Edge), Int) {
+  let edges = edges |> set.delete(current)
+  use <- bool.lazy_guard(current == start, fn() {
+    #(edges |> set.delete(start), score)
+  })
+  walk_loops_recurse(edges, direction, current, start, score)
 }
 
 pub fn get_edges(group: set.Set(Position)) -> set.Set(Edge) {
@@ -148,10 +172,10 @@ pub fn get_edges(group: set.Set(Position)) -> set.Set(Edge) {
 
       edges
       |> set.insert(case plot, neighbor {
-        #(i, j), #(l, k) if l == i && k < j -> Vert(i, j)
-        #(i, j), #(l, k) if l == i && k > j -> Vert(i, k)
-        #(i, j), #(l, k) if l < i && k == j -> Hor(i, j)
-        #(i, j), #(l, k) if l > i && k == j -> Hor(l, j)
+        #(i, j), #(l, k) if l == i && k < j -> VertLeft(i, j)
+        #(i, j), #(l, k) if l == i && k > j -> VertRight(i, j)
+        #(i, j), #(l, k) if l < i && k == j -> HorAbove(i, j)
+        #(i, j), #(l, k) if l > i && k == j -> HorBelow(i, j)
         _, _ -> panic
       })
     })
@@ -204,19 +228,6 @@ fn find_subgroup_recurse(
   })
 }
 
-fn pop(group: set.Set(Position)) -> #(set.Set(Position), Position) {
-  let assert Ok(element) =
-    group
-    |> set.to_list
-    |> list.first
-
-  let group =
-    group
-    |> set.delete(element)
-
-  #(group, element)
-}
-
 fn pop_neighbors(
   group: set.Set(Position),
   plot: Position,
@@ -236,4 +247,17 @@ fn pop_neighbors(
     })
 
   #(group, neighbors)
+}
+
+fn pop(group: set.Set(a)) -> #(set.Set(a), a) {
+  let assert Ok(element) =
+    group
+    |> set.to_list
+    |> list.first
+
+  let group =
+    group
+    |> set.delete(element)
+
+  #(group, element)
 }
