@@ -11,7 +11,7 @@ type Position =
   #(Int, Int)
 
 pub fn main() {
-  let assert Ok(content) = simplifile.read("input.mini")
+  let assert Ok(content) = simplifile.read("input")
 
   let plots =
     content
@@ -62,8 +62,6 @@ pub fn score_group(group: set.Set(Position)) -> Int {
   let edges = group |> get_edges
   let num_sides = edges |> walk_edges
 
-  io.debug(#(group |> set.size, num_sides, group))
-
   { group |> set.size } * num_sides
 }
 
@@ -87,8 +85,6 @@ fn walk_edges_rec(edges: set.Set(Edge), perimeter: Int) -> #(set.Set(Edge), Int)
     HorBelow(_, _) -> Right
   }
 
-  io.debug(#(perimeter, edges))
-
   let #(edges, delta) = edges |> walk_loops_recurse(direction, edge, edge, 0)
   let perimeter = perimeter + delta
 
@@ -102,9 +98,6 @@ fn walk_loops_recurse(
   start: Edge,
   score: Int,
 ) -> #(set.Set(Edge), Int) {
-  io.debug(edges)
-  io.debug(#(current, direction))
-
   let same_direction = case current, direction {
     VertLeft(i, j), Up -> VertLeft(i - 1, j)
     VertRight(i, j), Up -> VertRight(i - 1, j)
@@ -117,31 +110,39 @@ fn walk_loops_recurse(
     _, _ -> panic
   }
   use <- bool.lazy_guard(edges |> set.contains(same_direction), fn() {
-    io.debug("going same direction")
-    io.debug(same_direction)
     walk_loops_recurse_guard(edges, direction, same_direction, start, score)
   })
 
-  io.debug("could not go same direction")
-
   let score = score + 1
 
-  let #(turn, new_direction) = case current, direction {
-    // Turn left
+  let #(left_turn, new_direction) = case current, direction {
     VertLeft(i, j), Down -> #(HorBelow(i, j), Right)
     VertRight(i, j), Up -> #(HorAbove(i, j), Left)
     HorAbove(i, j), Left -> #(VertLeft(i, j), Down)
     HorBelow(i, j), Right -> #(VertRight(i, j), Up)
-    // Turn right
+    VertLeft(i, j), Up -> #(HorBelow(i - 1, j - 1), Left)
+    VertRight(i, j), Down -> #(HorAbove(i + 1, j + 1), Right)
+    HorAbove(i, j), Right -> #(VertLeft(i - 1, j + 1), Up)
+    HorBelow(i, j), Left -> #(VertRight(i + 1, j - 1), Down)
+    _, _ -> panic
+  }
+  use <- bool.lazy_guard(edges |> set.contains(left_turn), fn() {
+    walk_loops_recurse_guard(edges, new_direction, left_turn, start, score)
+  })
+
+  let #(right_turn, new_direction) = case current, direction {
     VertLeft(i, j), Up -> #(HorAbove(i, j), Right)
     VertRight(i, j), Down -> #(HorBelow(i, j), Left)
     HorAbove(i, j), Right -> #(VertRight(i, j), Down)
     HorBelow(i, j), Left -> #(VertLeft(i, j), Up)
+    VertLeft(i, j), Down -> #(HorAbove(i + 1, j - 1), Left)
+    VertRight(i, j), Up -> #(HorBelow(i - 1, j + 1), Right)
+    HorAbove(i, j), Left -> #(VertRight(i - 1, j - 1), Up)
+    HorBelow(i, j), Right -> #(VertLeft(i + 1, j + 1), Down)
     _, _ -> panic
   }
-  use <- bool.lazy_guard(edges |> set.contains(turn), fn() {
-    io.debug(#(turn, new_direction))
-    walk_loops_recurse_guard(edges, new_direction, turn, start, score)
+  use <- bool.lazy_guard(edges |> set.contains(right_turn), fn() {
+    walk_loops_recurse_guard(edges, new_direction, right_turn, start, score)
   })
 
   io.println_error("no connecting edge")
