@@ -1,10 +1,8 @@
 import gleam/bool
-import gleam/dict
 import gleam/int
 import gleam/io
 import gleam/list
 import gleam/option
-import gleam/result
 import gleam/set
 import gleam/string
 import simplifile
@@ -17,8 +15,8 @@ type Game {
 }
 
 pub fn main() {
-  let assert Ok(content) = simplifile.read("input.small")
-  let assert machines =
+  let assert Ok(content) = simplifile.read("input")
+  let machines =
     content
     |> string.split(on: "\n")
     |> list.fold([[]], fn(acc, line) {
@@ -44,42 +42,41 @@ pub fn main() {
 }
 
 fn score(machine: Game) -> Int {
-  machine
-  |> score_recurse(0, #(0, 0))
-  |> option.map(cost)
-  |> option.unwrap(0)
+  let #(x, y) = machine.target
+  let #(xa, ya) = machine.button_a
+  let #(xb, yb) = machine.button_b
+
+  let presses_x = possible_presses(xa, xb, x)
+  let presses_y = possible_presses(ya, yb, y)
+  let presses = set.intersection(presses_x, presses_y)
+
+  case
+    presses
+    |> set.fold(option.None, fn(acc, presses) {
+      case acc {
+        option.None -> option.Some(#(presses, cost(presses)))
+        option.Some(acc) -> {
+          let #(_, previous_cost) = acc
+          use <- bool.guard(previous_cost < cost(presses), option.Some(acc))
+          option.Some(#(presses, cost(presses)))
+        }
+      }
+    })
+  {
+    option.Some(#(presses, _)) -> cost(presses)
+    option.None -> 0
+  }
 }
 
-fn score_recurse(
-  machine: Game,
-  iteration: Int,
-  presses: #(Int, Int),
-) -> option.Option(#(Int, Int)) {
-  io.debug(iteration)
-  use <- bool.guard(
-    machine |> position(presses) == machine.target,
-    option.Some(presses),
-  )
+pub fn possible_presses(a: Int, b: Int, target: Int) -> set.Set(#(Int, Int)) {
+  let max_presses_b = target / b
 
-  let #(current_x, current_y) = machine |> position(presses)
-  let #(target_x, target_y) = machine.target
-
-  use <- bool.guard(current_x > target_x || current_y > target_y, option.None)
-  use <- bool.guard(iteration == 100, option.None)
-
-  let #(a, b) = presses
-  let left = score_recurse(machine, iteration + 1, #(a + 1, b))
-  let right = score_recurse(machine, iteration + 1, #(a, b + 1))
-
-  case left, right {
-    option.None, option.None -> option.None
-    option.None, option.Some(presses) -> option.Some(presses)
-    option.Some(presses), option.None -> option.Some(presses)
-    option.Some(left), option.Some(right) -> {
-      use <- bool.guard(cost(left) <= cost(right), option.Some(left))
-      option.Some(right)
-    }
-  }
+  list.range(0, max_presses_b)
+  |> list.filter_map(fn(i) {
+    use <- bool.guard({ target - i * b } % a != 0, Error(Nil))
+    Ok(#({ target - i * b } / a, i))
+  })
+  |> set.from_list
 }
 
 fn position(machine: Game, presses: #(Int, Int)) -> #(Int, Int) {
