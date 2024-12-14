@@ -18,7 +18,7 @@ type Game {
 }
 
 pub fn main() {
-  let assert Ok(content) = simplifile.read("input.small")
+  let assert Ok(content) = simplifile.read("input")
   let machines =
     content
     |> string.split(on: "\n")
@@ -38,13 +38,13 @@ pub fn main() {
 
   let result =
     machines
-    |> list.map(fn(machine) {
-      let Machine(button_a, button_b, #(x, y)) = machine
-      Machine(button_a, button_b, target: #(
-        10_000_000_000_000 + x,
-        10_000_000_000_000 + y,
-      ))
-    })
+    //    |> list.map(fn(machine) {
+    //      let Machine(button_a, button_b, #(x, y)) = machine
+    //      Machine(button_a, button_b, target: #(
+    //        10_000_000_000_000 + x,
+    //        10_000_000_000_000 + y,
+    //      ))
+    //    })
     |> list.map(score)
     |> int.sum
 
@@ -56,20 +56,31 @@ fn score(machine: Game) -> Int {
   let #(adx, ady) = machine.button_a
   let #(bdx, bdy) = machine.button_b
 
+  io.debug(#(x / bdx, y / bdy))
   let max_b_presses = int.max(x / bdx, y / bdy)
 
-  yielder.range(max_b_presses, 0)
-  |> yielder.find(fn(b) { { x - b * bdx } % adx == 0 })
-  |> result.map(fn(b) {
-    let a = { x - b * bdx } / adx
+  let #(_, result) =
+    yielder.range(max_b_presses, 0)
+    |> yielder.fold_until(#(set.new(), option.None), fn(acc, b) {
+      let #(seen, min_cost) = acc
+      let l = { x - b * bdx } / adx
+      let k = { y - b * bdy } / ady
 
-    let l = arithmetics.lcm(adx, bdx)
-    let p = l / adx
-    let q = l / ady
+      let rx = { x - b * bdx } % adx
+      let ry = { y - b * bdy } % ady
 
-    min_cost_rec(a, b, p, q, option.None)
-  })
-  |> result.unwrap(0)
+      use <- bool.guard(
+        seen |> set.contains(#(rx, ry)),
+        list.Stop(#(seen, min_cost)),
+      )
+
+      case rx == 0 && ry == 0 && l == k {
+        True -> list.Stop(#(seen, option.Some(cost(#(l, b)))))
+        False -> list.Continue(#(seen |> set.insert(#(rx, ry)), min_cost))
+      }
+    })
+
+  result |> option.unwrap(0)
 }
 
 fn min_cost_rec(a: Int, b: Int, p: Int, q: Int, min: option.Option(Int)) -> Int {
