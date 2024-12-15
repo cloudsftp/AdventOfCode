@@ -11,14 +11,19 @@
          (/ x bdx)
          (/ y bdy)))
 
-(setq b ())
+(setq b (/ b 1000))
 
 (setq b 100000000000)
 
+(defun calc-diff (b)
+  (let ((l (/ (- x (* b bdx)) adx))
+        (k (/ (- y (* b bdy)) ady)))
+    (abs (- l k))))
+
 (setq l (/ (- x (* b bdx)) adx))
 (setq k (/ (- y (* b bdy)) ady))
-
 (abs (- l k))
+
 
 ;; why the big difference?
 ;; how to choose b wisely

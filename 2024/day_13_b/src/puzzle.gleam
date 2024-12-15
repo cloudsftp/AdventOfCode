@@ -1,4 +1,5 @@
 import gleam/bool
+import gleam/float
 import gleam/int
 import gleam/io
 import gleam/list
@@ -51,6 +52,26 @@ pub fn main() {
 }
 
 fn score(machine: Game) -> Int {
+  let #(x, y) = machine.target
+  let #(adx, ady) = machine.button_a
+  let #(bdx, bdy) = machine.button_b
+
+  let f = int.to_float(ady) /. int.to_float(adx)
+
+  let b =
+    float.round({
+      { int.to_float(y) -. f *. int.to_float(x) }
+      /. { int.to_float(bdy) -. f *. int.to_float(bdx) }
+    })
+
+  let a = { x - b * bdx } / adx
+
+  use <- bool.guard(a * adx + b * bdx != x || a * ady + b * bdy != y, 0)
+
+  3 * a + b
+}
+
+fn old_score(machine: Game) -> Int {
   let #(x, y) = machine.target
   let #(adx, ady) = machine.button_a
   let #(bdx, bdy) = machine.button_b
