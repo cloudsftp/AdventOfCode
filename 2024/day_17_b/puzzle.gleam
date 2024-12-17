@@ -156,6 +156,24 @@ fn parse(content: String) -> #(Machine, glearray.Array(#(Operator, Int))) {
   #(Computer(a, b, c, 0, []), program)
 }
 
+fn print_instruction(instruction: #(Operator, Int), computer: Machine) {
+  let #(operator, operand) = instruction
+  let Computer(a, b, c, _, _) = computer
+  let combo_operand = operand |> combo(a, b, c) |> int.to_string
+  let operand = operand |> int.to_string
+
+  io.println(case operator {
+    DivideA -> "a >> " <> combo_operand <> " -> a"
+    XorB -> "b xor lit " <> operand <> " -> b"
+    Mod8B -> "combo " <> operand <> " mod 8 -> b"
+    JumpNonZeroA -> "goto lit " <> operand <> " if a == 0"
+    XorBC -> "b xor c -> b"
+    Out -> "combo " <> operand <> " % 8 -> out"
+    DivideAB -> "a >> " <> operand <> " -> b"
+    DivideAC -> "a >> " <> operand <> " -> c"
+  })
+}
+
 fn print_program(program: glearray.Array(#(Operator, Int))) {
   let program =
     program

@@ -24,20 +24,58 @@ type Machine {
 
 pub fn main() {
   let assert Ok(content) = simplifile.read("input")
-  let #(computer, program) = parse(content)
+  let #(computer, program, code) = parse(content)
 
   print_program(program)
+  io.println("")
 
-  io.debug(computer)
-  let output = evaluate(program, computer)
+  let a = compute_a(code)
 
+  let Computer(_, b, c, pc, out) = computer
+  let output = evaluate(program, Computer(a, b, c, pc, out))
   let result =
     output
     |> list.fold_right("", fn(acc, value) {
       use <- bool.guard(acc |> string.is_empty, value |> int.to_string)
       value |> int.to_string <> "," <> acc
     })
-  io.debug(result)
+  io.println(a |> int.to_string <> ": " <> result)
+}
+
+fn compute_a(code: List(Int)) -> Int {
+  let nibble = #(True, True, True)
+  code
+  |> list.fold([nibble], fn(acc, value) {
+    let assert [#(a5, a4, a3), ..] = acc
+
+    let v2 = { value / 4 } % 2 == 1
+    let v1 = { value / 2 } % 2 == 1
+    let v0 = value % 2 == 1
+
+    io.debug(#(value, v2, v1, v0))
+
+    let a2 = {
+      a5 |> bool.exclusive_or(!v2)
+    }
+    let a1 = {
+      a4 |> bool.exclusive_or(v1)
+    }
+    let a0 = {
+      a3 |> bool.exclusive_or(!v0)
+    }
+
+    io.debug(#(a2, a1, a0))
+
+    [#(a2, a1, a0), ..acc]
+  })
+  |> list.index_fold(0, fn(acc, nibble, i) {
+    let #(a2, a1, a0) = nibble
+
+    acc
+    + { a0 |> bool.to_int |> int.bitwise_shift_left(3 * i) }
+    + { a1 |> bool.to_int |> int.bitwise_shift_left(3 * i + 1) }
+    + { a2 |> bool.to_int |> int.bitwise_shift_left(3 * i + 2) }
+  })
 }
 
 fn combo(operand: Int, a: Int, b: Int, c: Int) -> Int {
@@ -68,6 +106,8 @@ fn evaluate(
 
   let assert Ok(#(operator, operand)) = program |> glearray.get(computer.pc)
 
+  //print_instruction(#(operator, operand), computer)
+
   let Computer(a, b, c, pc, out) = computer
   let computer = case operator {
     DivideA -> Computer(divide(operand, a, b, c), b, c, pc + 1, out)
@@ -93,13 +133,12 @@ fn evaluate(
     DivideAC -> Computer(a, b, divide(operand, a, b, c), pc + 1, out)
   }
 
-  io.debug(#(operator, operand))
-  io.debug(computer)
-
   evaluate(program, computer)
 }
 
-fn parse(content: String) -> #(Machine, glearray.Array(#(Operator, Int))) {
+fn parse(
+  content: String,
+) -> #(Machine, glearray.Array(#(Operator, Int)), List(Int)) {
   let assert Ok(#(registers, program)) =
     content |> string.split_once(on: "\n\n")
 
@@ -122,6 +161,14 @@ fn parse(content: String) -> #(Machine, glearray.Array(#(Operator, Int))) {
     program
     |> string.trim
     |> string.split_once(on: ": ")
+
+  let code =
+    program
+    |> string.split(on: ",")
+    |> list.map(fn(value) {
+      let assert Ok(value) = value |> int.parse
+      value
+    })
 
   let program =
     {
@@ -153,7 +200,37 @@ fn parse(content: String) -> #(Machine, glearray.Array(#(Operator, Int))) {
     }.0
     |> glearray.from_list
 
-  #(Computer(a, b, c, 0, []), program)
+  #(Computer(a, b, c, 0, []), program, code)
+}
+
+fn print_instruction(instruction: #(Operator, Int), computer: Machine) {
+  let Computer(a, b, c, _, _) = computer
+  let #(operator, operand) = instruction
+
+  let combo_operand = operand |> combo(a, b, c) |> int.to_string
+  let operand = operand |> int.to_string
+  let a = a |> int.to_string
+  let b = b |> int.to_string
+  let c = c |> int.to_string
+
+  io.println("state -\ta: " <> a <> ",\tb: " <> b <> ",\tc: " <> c)
+  io.println(
+    "out   -\t " <> computer.out |> list.map(int.to_string) |> string.join(","),
+  )
+  io.println("")
+  io.println("#######################")
+  io.println("")
+  io.println(case operator {
+    DivideA -> a <> " >> " <> combo_operand <> " -> a"
+    XorB -> b <> " xor " <> operand <> " -> b"
+    Mod8B -> combo_operand <> " mod 8 -> b"
+    JumpNonZeroA -> "goto " <> operand <> " if a == 0"
+    XorBC -> b <> " xor " <> c <> " -> b"
+    Out -> combo_operand <> " % 8 -> out"
+    DivideAB -> a <> " >> " <> combo_operand <> " -> b"
+    DivideAC -> a <> " >> " <> combo_operand <> " -> c"
+  })
+  io.println("")
 }
 
 fn print_program(program: glearray.Array(#(Operator, Int))) {
