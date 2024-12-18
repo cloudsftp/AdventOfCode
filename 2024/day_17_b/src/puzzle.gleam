@@ -3,6 +3,7 @@ import gleam/int
 import gleam/io
 import gleam/list
 import gleam/option
+import gleam/result
 import gleam/string
 import glearray
 import simplifile
@@ -29,7 +30,7 @@ pub fn main() {
   print_program(program)
   io.println("")
 
-  let a = compute_a(code)
+  let a = compute_a(code, program, computer)
 
   let Computer(_, b, c, pc, out) = computer
   let output = evaluate(program, Computer(a, b, c, pc, out))
@@ -42,39 +43,27 @@ pub fn main() {
   io.println(a |> int.to_string <> ": " <> result)
 }
 
-fn compute_a(code: List(Int)) -> Int {
-  let nibble = #(True, True, True)
+fn compute_a(
+  code: List(Int),
+  program: glearray.Array(#(Operator, Int)),
+  computer: Machine,
+) -> Int {
   code
-  |> list.fold([nibble], fn(acc, value) {
-    let assert [#(a5, a4, a3), ..] = acc
+  |> list.fold_right(0, fn(a, expected_first) {
+    io.debug(a)
+    let a = a |> int.bitwise_shift_left(3)
 
-    let v2 = { value / 4 } % 2 == 1
-    let v1 = { value / 2 } % 2 == 1
-    let v0 = value % 2 == 1
+    let assert Ok(a) =
+      list.range(a, a + 8)
+      |> list.find(fn(a) {
+        let Computer(_, b, c, pc, out) = computer
+        let assert [first, ..] =
+          io.debug(evaluate(program, Computer(a, b, c, pc, out)))
 
-    io.debug(#(value, v2, v1, v0))
+        first == expected_first
+      })
 
-    let a2 = {
-      a5 |> bool.exclusive_or(!v2)
-    }
-    let a1 = {
-      a4 |> bool.exclusive_or(v1)
-    }
-    let a0 = {
-      a3 |> bool.exclusive_or(!v0)
-    }
-
-    io.debug(#(a2, a1, a0))
-
-    [#(a2, a1, a0), ..acc]
-  })
-  |> list.index_fold(0, fn(acc, nibble, i) {
-    let #(a2, a1, a0) = nibble
-
-    acc
-    + { a0 |> bool.to_int |> int.bitwise_shift_left(3 * i) }
-    + { a1 |> bool.to_int |> int.bitwise_shift_left(3 * i + 1) }
-    + { a2 |> bool.to_int |> int.bitwise_shift_left(3 * i + 2) }
+    a
   })
 }
 
@@ -207,11 +196,27 @@ fn print_instruction(instruction: #(Operator, Int), computer: Machine) {
   let Computer(a, b, c, _, _) = computer
   let #(operator, operand) = instruction
 
-  let combo_operand = operand |> combo(a, b, c) |> int.to_string
+  let combo_operand = case operand {
+    operand if 0 <= operand && operand <= 3 -> operand |> int.to_string
+    4 -> "a"
+    5 -> "b"
+    6 -> "c"
+    _ -> panic
+  }
   let operand = operand |> int.to_string
   let a = a |> int.to_string
   let b = b |> int.to_string
   let c = c |> int.to_string
+
+  io.println(
+    "A: "
+    <> computer.a |> int.to_base_string(2) |> result.unwrap("-")
+    <> "\nB: "
+    <> computer.b |> int.to_base_string(2) |> result.unwrap("-")
+    <> "\nC: "
+    <> computer.c |> int.to_base_string(2) |> result.unwrap("-")
+    <> "\n",
+  )
 
   io.println("state -\ta: " <> a <> ",\tb: " <> b <> ",\tc: " <> c)
   io.println(
@@ -221,14 +226,14 @@ fn print_instruction(instruction: #(Operator, Int), computer: Machine) {
   io.println("#######################")
   io.println("")
   io.println(case operator {
-    DivideA -> a <> " >> " <> combo_operand <> " -> a"
-    XorB -> b <> " xor " <> operand <> " -> b"
+    DivideA -> "a >> " <> combo_operand <> " -> a"
+    XorB -> "b xor " <> operand <> " -> b"
     Mod8B -> combo_operand <> " mod 8 -> b"
     JumpNonZeroA -> "goto " <> operand <> " if a == 0"
-    XorBC -> b <> " xor " <> c <> " -> b"
+    XorBC -> "b xor c -> b"
     Out -> combo_operand <> " % 8 -> out"
-    DivideAB -> a <> " >> " <> combo_operand <> " -> b"
-    DivideAC -> a <> " >> " <> combo_operand <> " -> c"
+    DivideAB -> "a >> " <> combo_operand <> " -> b"
+    DivideAC -> "a >> " <> combo_operand <> " -> c"
   })
   io.println("")
 }
