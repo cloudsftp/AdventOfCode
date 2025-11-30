@@ -1,6 +1,9 @@
 module Main (main) where
 
-import Lib
+import Data (readExample, ExampleType (..))
 
 main :: IO ()
-main = someFunc
+main = do
+  content <- readExample 2024 01 Small
+  putStrLn ""
+  putStrLn content
