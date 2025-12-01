@@ -1,16 +1,6 @@
-module Lib
-    ( ExampleType (..)
-    , Year
-    , ID
-    , solve
-    ) where
+module Solutions.Day01 (solve) where
 
 import Debug.Trace (traceShow)
-
-data ExampleType = Small | Big deriving (Show, Read)
-
-type Year = Int
-type ID = Int
 
 solve :: String -> Int
 solve input = let state = foldl process (State { dial = 50, counter = 0 }) $ lines input
@@ -28,25 +18,16 @@ data Command = Command { direction :: Direction
 
 process :: State -> String -> State
 process State { dial = dial, counter = counter } line =
-  let n = 100
-      Command { direction = direction, count = count } = command line
-      newCounter = counter + increase n (Command { direction = direction, count = count }) dial
-      moveDial = case direction of
-          L -> -count
-          R -> count
-      newDial = dialMod (dial + moveDial) n
-  in debug $ State { dial = newDial, counter = newCounter }
-
-increase :: Int -> Command -> Int -> Int
-increase n Command { direction = direction, count = count } dial =
-  case direction of
-        R -> div count n + if ((dialMod (dial + count) n == 0) or (dial + count > 100)) then 1 else 0
-        L -> div count n + if dialMod (dial - count) n == 0 then 1 else 0
+  let Command { direction = direction, count = count } = command line
+      increase = if dial == 0 then 1 else 0
+  in debug $ case direction of
+          L -> State { dial = dialMod (dial - count) 100, counter = counter + increase }
+          R -> State { dial = dialMod (dial + count) 100, counter = counter + increase }
 
 dialMod :: Int -> Int -> Int
 dialMod a n
   | a < 0 = dialMod (a + n) n
-  | a > n = dialMod (a - n) n
+  | a >= n = dialMod (a - n) n
   | otherwise = a
 
 command :: String -> Command
@@ -56,3 +37,4 @@ command line = let direction = read [head line] :: Direction
 
 debug :: Show a => a -> a
 debug value = traceShow value value
+

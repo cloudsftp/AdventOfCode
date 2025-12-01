@@ -2,7 +2,7 @@ module Main (main) where
 
 import System.Environment
 
-import Lib (ExampleType (..), ID, compute)
+import Lib (ExampleType (..), ID, solve)
 import Data (readExample)
 import Text (capitalize)
 
@@ -20,7 +20,7 @@ main = do
 
     input <- readExample 2025 exerciseId exampleType
 
-    let result = compute input :: Int
+    let result = solve input :: Int
 
     putStrLn $ "The result is: " ++ show result
 
