@@ -1,6 +1,10 @@
 module Lib
-    ( someFunc
+    ( ExampleType (..)
+    , Year
+    , ID
     ) where
 
-someFunc :: IO ()
-someFunc = putStrLn "someFunc"
+data ExampleType = Small | Big deriving (Show, Read)
+
+type Year = Int
+type ID = Int

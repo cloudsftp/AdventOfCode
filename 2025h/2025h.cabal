@@ -27,6 +27,7 @@ library
   exposed-modules:
       Data
       Lib
+      Text
   other-modules:
       Paths_2025h
   autogen-modules:
