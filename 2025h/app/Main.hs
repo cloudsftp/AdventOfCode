@@ -2,9 +2,10 @@ module Main (main) where
 
 import System.Environment
 
-import Lib (ExampleType (..), ID, solve)
+import Lib (ExampleType (..), ID)
 import Data (readExample)
 import Text (capitalize)
+import Solutions.Day01b (solve)
 
 main :: IO ()
 main = do

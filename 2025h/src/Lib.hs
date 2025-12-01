@@ -2,57 +2,15 @@ module Lib
     ( ExampleType (..)
     , Year
     , ID
-    , solve
+    , debug
     ) where
 
 import Debug.Trace (traceShow)
+
+debug :: Show a => a -> a
+debug value = traceShow value value
 
 data ExampleType = Small | Big deriving (Show, Read)
 
 type Year = Int
 type ID = Int
-
-solve :: String -> Int
-solve input = let state = foldl process (State { dial = 50, counter = 0 }) $ lines input
-                in counter state
-
-data State = State { dial :: Int
-                   , counter :: Int
-                   } deriving (Show)
-
-data Direction = L | R deriving (Show, Read, Eq)
-
-data Command = Command { direction :: Direction
-                       , count :: Int
-                       } deriving (Show)
-
-process :: State -> String -> State
-process State { dial = dial, counter = counter } line =
-  let n = 100
-      Command { direction = direction, count = count } = command line
-      newCounter = counter + increase n (Command { direction = direction, count = count }) dial
-      moveDial = case direction of
-          L -> -count
-          R -> count
-      newDial = dialMod (dial + moveDial) n
-  in debug $ State { dial = newDial, counter = newCounter }
-
-increase :: Int -> Command -> Int -> Int
-increase n Command { direction = direction, count = count } dial =
-  case direction of
-        R -> div count n + if ((dialMod (dial + count) n == 0) or (dial + count > 100)) then 1 else 0
-        L -> div count n + if dialMod (dial - count) n == 0 then 1 else 0
-
-dialMod :: Int -> Int -> Int
-dialMod a n
-  | a < 0 = dialMod (a + n) n
-  | a > n = dialMod (a - n) n
-  | otherwise = a
-
-command :: String -> Command
-command line = let direction = read [head line] :: Direction
-                   count = (read $ tail line) :: Int
-               in debug $ Command { direction = direction, count = count }
-
-debug :: Show a => a -> a
-debug value = traceShow value value

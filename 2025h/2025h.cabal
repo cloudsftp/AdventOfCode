@@ -28,6 +28,7 @@ library
       Data
       Lib
       Solutions.Day01
+      Solutions.Day01b
       Text
   other-modules:
       Paths_2025h
