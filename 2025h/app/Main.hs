@@ -1,12 +1,15 @@
 module Main (main) where
 
 import System.Environment
+import Data.Map
 
 import Lib (ExampleType (..), Part (..), ID)
 import Data (readExample)
 import Text (capitalize)
+
 import qualified Solutions.Day01a (solve)
 import qualified Solutions.Day01b (solve)
+import qualified Solutions.Day02a (solve)
 
 main :: IO ()
 main = do
@@ -23,8 +26,12 @@ main = do
 
     input <- readExample 2025 exerciseId exampleType
 
-    let solve = Solutions.Day01a.solve
-        result = solve input :: Int
+    let functions = fromList [ (( 1, A), Solutions.Day01a.solve)
+                             , (( 1, B), Solutions.Day01b.solve)
+                             , (( 2, A), Solutions.Day02a.solve)
+                             ]
+        function = functions ! (exerciseId, exercisePart)
+        result = function input :: Int
 
     putStrLn $ "The result is: " ++ show result
 

@@ -1,7 +1,7 @@
 module Lib
     ( ExampleType (..)
+    , Part (..)
     , Year
-    , Part
     , ID
     , debug
     ) where
@@ -15,5 +15,5 @@ debug value = traceShow value value
 data ExampleType = Small | Big deriving (Show, Read)
 
 type Year = Int
-data Part = A | B deriving (Show, Read)
+data Part = A | B deriving (Show, Read, Eq, Ord)
 type ID = Int
