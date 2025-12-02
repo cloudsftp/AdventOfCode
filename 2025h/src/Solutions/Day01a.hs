@@ -1,6 +1,6 @@
-module Solutions.Day01 (solve) where
+module Solutions.Day01a (solve) where
 
-import Debug.Trace (traceShow)
+import Lib
 
 solve :: String -> Int
 solve input = let state = foldl process (State { dial = 50, counter = 0 }) $ lines input
@@ -34,7 +34,4 @@ command :: String -> Command
 command line = let direction = read [head line] :: Direction
                    count = (read $ tail line) :: Int
                in debug $ Command { direction = direction, count = count }
-
-debug :: Show a => a -> a
-debug value = traceShow value value
 

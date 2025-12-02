@@ -27,7 +27,7 @@ library
   exposed-modules:
       Data
       Lib
-      Solutions.Day01
+      Solutions.Day01a
       Solutions.Day01b
       Text
   other-modules:

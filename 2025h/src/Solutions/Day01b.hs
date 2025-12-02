@@ -22,14 +22,11 @@ process :: State -> String -> State
 process State { dial = currentDial, counter = c } line =
   let Command { direction = d, count = m } = parseLine line
       n = 100
-      nextDial = mod (currentDial
-                      + (if d == L then (-1) else 1) * m)
-                 n
-      increase = debug
-        $ div (debug $ case d of
-          R -> currentDial + m
-          L -> if currentDial == 0 then m else n + m - currentDial
-        ) n
+      nextDial = mod (currentDial + (if d == L then (-1) else 1) * m) n
+      increase = div (case d of
+                        R -> currentDial + m
+                        L -> if currentDial == 0 then m else n + m - currentDial
+                      ) n
   in debug $ State { dial = nextDial, counter = c + increase }
 
 

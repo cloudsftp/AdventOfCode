@@ -16,8 +16,3 @@ readExample year problemId exampleType = do
     fileName = joinPath ["data", yearPart, idPart, typePart]
   putStrLn $ "Attemting to open file " ++ fileName ++ "\n"
   readFile fileName
-
-leftPad0 :: Int -> String -> String
-leftPad0 n xs
-  | length xs >= n = xs
-  | otherwise      = leftPad0 (n - 1) ('0':xs)
