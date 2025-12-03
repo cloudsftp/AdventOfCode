@@ -11,6 +11,7 @@ import qualified Solutions.Day01a (solve)
 import qualified Solutions.Day01b (solve)
 import qualified Solutions.Day02a (solve)
 import qualified Solutions.Day02b (solve)
+import qualified Solutions.Day03a (solve)
 
 main :: IO ()
 main = do
@@ -31,6 +32,7 @@ main = do
                              , (( 1, B), Solutions.Day01b.solve)
                              , (( 2, A), Solutions.Day02a.solve)
                              , (( 2, B), Solutions.Day02b.solve)
+                             , (( 3, A), Solutions.Day03a.solve)
                              ]
         function = functions ! (exerciseId, exercisePart)
         result = function input :: Int
