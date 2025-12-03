@@ -13,19 +13,26 @@ solve input =
 
 bankJoltage :: Bank -> Int
 bankJoltage [_] = 0
-bankJoltage bank = max (bankJoltageOuter bank)
-                       (bankJoltageOuter $ tail bank)
+bankJoltage bank =
+  let maximum = max (bankJoltageOuter bank)
+                    (bankJoltage $ tail bank)
+  in trace ("checking bank " ++ show bank ++ " found maximum " ++ show maximum)
+           maximum
+  
 
 bankJoltageOuter :: Bank -> Int
 bankJoltageOuter bank =
   let (first:rest) = bank
-  in bankJoltageInner first rest
-
+  in trace ("selected first digit: " ++ show first)
+           (bankJoltageInner first rest)
 
 bankJoltageInner :: Int -> Bank -> Int
 bankJoltageInner _ [] = 0
-bankJoltageInner first (d:ds) = max (10 * first + d)
-                                    (bankJoltageInner first ds)
+bankJoltageInner first (d:ds) =
+  let sum = 10 * first + d
+      call = bankJoltageInner first ds
+  in trace ("current sum: " ++ show sum ++ ", recursive maximum: " ++ show call)
+           max sum call
 
 
 -- parsing
