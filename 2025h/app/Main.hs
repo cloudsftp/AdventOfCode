@@ -10,6 +10,7 @@ import Text (capitalize)
 import qualified Solutions.Day01a (solve)
 import qualified Solutions.Day01b (solve)
 import qualified Solutions.Day02a (solve)
+import qualified Solutions.Day02b (solve)
 
 main :: IO ()
 main = do
@@ -29,6 +30,7 @@ main = do
     let functions = fromList [ (( 1, A), Solutions.Day01a.solve)
                              , (( 1, B), Solutions.Day01b.solve)
                              , (( 2, A), Solutions.Day02a.solve)
+                             , (( 2, B), Solutions.Day02b.solve)
                              ]
         function = functions ! (exerciseId, exercisePart)
         result = function input :: Int
