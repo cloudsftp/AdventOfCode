@@ -3,6 +3,7 @@ module Solutions.Day03b
   ) where
 
 import Debug.Trace
+import Data.List (tails)
 
 type Bank = [Int]
 
@@ -14,26 +15,24 @@ solve input =
 bankJoltage :: Bank -> Int
 bankJoltage [_] = 0
 bankJoltage bank =
-  let maximum = max (bankJoltageOuter bank)
+  let maximum = max (bankJoltageOuter 12 0 bank)
                     (bankJoltage $ tail bank)
   in trace ("checking bank " ++ show bank ++ " found maximum " ++ show maximum)
-           maximum
-  
+     maximum
 
-bankJoltageOuter :: Bank -> Int
-bankJoltageOuter bank =
-  let (first:rest) = bank
-  in trace ("selected first digit: " ++ show first)
-           (bankJoltageInner first rest)
+bankJoltageOuter :: Int -> Int -> Bank -> Int
+bankJoltageOuter 0 sum _ = sum
+bankJoltageOuter n sum bank =
+  let banks = filter (\tail -> length tail >= n) $ tails bank
+      calls = map (bankJoltageInner (n - 1) sum) banks
+  in foldl max 0 calls
 
-bankJoltageInner :: Int -> Bank -> Int
-bankJoltageInner _ [] = 0
-bankJoltageInner first (d:ds) =
-  let sum = 10 * first + d
-      call = bankJoltageInner first ds
-  in trace ("current sum: " ++ show sum ++ ", recursive maximum: " ++ show call)
-           max sum call
-
+bankJoltageInner :: Int -> Int -> Bank -> Int
+bankJoltageInner 0 sum _ = sum
+bankJoltageInner n sum [] = error ("should never happen, got args: " ++ show n ++ " and " ++ show sum)
+bankJoltageInner n sum (d:ds) =
+  let newSum = 10 * sum + d
+  in bankJoltageOuter n newSum ds
 
 -- parsing
 
