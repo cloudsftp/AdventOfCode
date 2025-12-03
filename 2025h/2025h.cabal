@@ -32,6 +32,7 @@ library
       Solutions.Day02a
       Solutions.Day02b
       Solutions.Day03a
+      Solutions.Day03b
       Text
   other-modules:
       Paths_2025h
