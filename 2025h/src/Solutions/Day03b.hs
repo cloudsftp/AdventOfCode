@@ -3,7 +3,9 @@ module Solutions.Day03b
   ) where
 
 import Debug.Trace
-import Data.List (tails)
+
+import Data.Map (Map, insert, empty)
+import Data.Ix
 
 type Bank = [Int]
 
@@ -13,26 +15,32 @@ solve input =
   in sum $ map bankJoltage banks
 
 bankJoltage :: Bank -> Int
-bankJoltage [_] = 0
 bankJoltage bank =
-  let maximum = max (bankJoltageOuter 12 0 bank)
-                    (bankJoltage $ tail bank)
-  in trace ("checking bank " ++ show bank ++ " found maximum " ++ show maximum)
-     maximum
+  let digitOccurrences = digits bank
+  in trace ("occurrences: " ++ show digitOccurrences)
+           0
 
-bankJoltageOuter :: Int -> Int -> Bank -> Int
-bankJoltageOuter 0 sum _ = sum
-bankJoltageOuter n sum bank =
-  let banks = filter (\tail -> length tail >= n) $ tails bank
-      calls = map (bankJoltageInner (n - 1) sum) banks
-  in foldl max 0 calls
+-- digit positions
 
-bankJoltageInner :: Int -> Int -> Bank -> Int
-bankJoltageInner 0 sum _ = sum
-bankJoltageInner n sum [] = error ("should never happen, got args: " ++ show n ++ " and " ++ show sum)
-bankJoltageInner n sum (d:ds) =
-  let newSum = 10 * sum + d
-  in bankJoltageOuter n newSum ds
+digits :: Bank -> Map Int [Int]
+digits bank = foldl (\digitOccurrences d -> insert d (occurrences d bank) digitOccurrences)
+                    empty $ range (1, 9)
+
+data DigitCounter = DigitCollecter { position :: Int
+                                   , collected :: [Int]
+                                   } deriving (Show)
+
+occurrences :: Int -> Bank -> [Int]
+occurrences v bank = collected $
+  foldl (\DigitCollecter { position = pos, collected = coll } d ->
+           let newPosition = pos + 1
+               newCollected = if v == d
+                              then pos:coll
+                              else coll
+           in DigitCollecter { position = newPosition, collected = newCollected }
+        )
+        (DigitCollecter { position = 0, collected = [] })
+        bank
 
 -- parsing
 

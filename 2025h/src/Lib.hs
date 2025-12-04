@@ -12,7 +12,7 @@ debug :: Show a => a -> a
 debug value = traceShow value value
 -- debug value = value
 
-data ExampleType = Small | Big deriving (Show, Read)
+data ExampleType = Small | Debug | Big deriving (Show, Read)
 
 type Year = Int
 data Part = A | B deriving (Show, Read, Eq, Ord)
