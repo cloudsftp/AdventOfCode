@@ -34,6 +34,7 @@ library
       Solutions.Day03a
       Solutions.Day03b
       Solutions.Day04a
+      Solutions.Day04b
       Text
   other-modules:
       Paths_2025h

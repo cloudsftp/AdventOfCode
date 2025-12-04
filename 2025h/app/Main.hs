@@ -14,6 +14,7 @@ import qualified Solutions.Day02b (solve)
 import qualified Solutions.Day03a (solve)
 import qualified Solutions.Day03b (solve)
 import qualified Solutions.Day04a (solve)
+import qualified Solutions.Day04b (solve)
 
 main :: IO ()
 main = do
@@ -24,7 +25,7 @@ main = do
     return ()
     
   else do
-    let exerciseId = read (args !! 0) :: ID
+    let exerciseId = read (head args) :: ID
         exercisePart = read (capitalize $ args !! 1) :: Part
         exampleType = read (capitalize $ args !! 2) :: ExampleType
 
@@ -37,6 +38,7 @@ main = do
                              , (( 3, A), Solutions.Day03a.solve)
                              , (( 3, B), Solutions.Day03b.solve)
                              , (( 4, A), Solutions.Day04a.solve)
+                             , (( 4, B), Solutions.Day04b.solve)
                              ]
         function = functions ! (exerciseId, exercisePart)
         result = function input :: Int
