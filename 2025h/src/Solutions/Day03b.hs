@@ -17,9 +17,15 @@ solve input =
 bankJoltage :: Bank -> Int
 bankJoltage bank =
   let digitOccurrences = digitPositions bank
-      selectedDigits = selectNDigits 9 9 (0, length bank) digitOccurrences
-  in trace ("occurrences: " ++ show digitOccurrences ++ " selected digits: " ++ show selectedDigits)
-           0
+      largestDigit = 9
+      n = 3
+      selectedDigits =
+        selectNDigits largestDigit
+                      n
+                      (0, length bank)
+                      digitOccurrences
+  in trace ("occurrences: " ++ show digitOccurrences ++ "\nselected digits: " ++ show selectedDigits)
+           0 -- compute number from selected digits
 
 data Digit = Digit { digit :: Int
                    , position :: Int
@@ -27,19 +33,29 @@ data Digit = Digit { digit :: Int
 
 selectNDigits :: Int -> Int -> (Int, Int) -> Map Int [Int] -> [Digit]
 selectNDigits _ 0 _ _ = []
-selectNDigits d n (l, r) digits
-  | r - l <= n =
-    let digitIsInRange Digit { position = p } = p >= l && p < r
-    in  filter digitIsInRange $ allDigits digits
+selectNDigits d n (l, r) positions
+  | r - l <= n = filter digitIsInRange $ allDigits positions
   | otherwise =
-    let result = [] -- choose as much digits d as possible
-    in result       -- if n still greater, recurse from right to left on ranges of left-over digits
+    let digits = filter digitIsInRange $ matchingDigits d positions
+        numDigits = length digits
+    in
+      if numDigits >= n
+      then take n digits
+      else []
+  where digitIsInRange Digit { position = p } = p >= l && p < r
+
+-- choose as much digits d as possible
+-- if n still greater, recurse from right to left on ranges of left-over digits
+
+matchingDigits :: Int -> Map Int [Int] -> [Digit]
+matchingDigits d positions = map (toDigit d) $ positions ! d
 
 allDigits :: Map Int [Int] -> [Digit]
 allDigits = foldrWithKey collectDigits []
 
 collectDigits :: Int -> [Int] -> [Digit] -> [Digit]
-collectDigits d positions ds = foldl (\acc p -> toDigit d p:acc) ds positions
+collectDigits d positions ds = foldl (\digits p -> toDigit d p:digits)
+                                     ds positions
 
 toDigit :: Int -> Int -> Digit
 toDigit d p = Digit { digit = d, position = p }
