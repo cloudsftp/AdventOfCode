@@ -18,7 +18,7 @@ solve input =
 
 countAccessibleBoxes :: Data -> Int
 countAccessibleBoxes (empty, boxes) =
-  let accessibleBoxes = foldl (collectAccessibleBoxes boxes) Set.empty empty
+  let accessibleBoxes = foldl (collectAccessibleBoxes boxes) Set.empty boxes
   in trace (" accessible Boxes: " ++ show accessibleBoxes
            ++ "\n field: \n" ++ printField (empty, boxes) accessibleBoxes
            ++ "\n")
@@ -28,9 +28,9 @@ countAccessibleBoxes (empty, boxes) =
 collectAccessibleBoxes :: Set Position -> Set Position -> Position -> Set Position
 collectAccessibleBoxes boxes accessible position =
   let adjacent = adjacentBoxes position boxes
-      isGoodEmptySpot = Set.size adjacent < 4
-  in if isGoodEmptySpot
-     then Set.union accessible adjacent
+      isAccessible = Set.size adjacent < 4
+  in if isAccessible
+     then Set.insert position accessible
      else accessible
 
 adjacentBoxes :: Position -> Set Position -> Set Position
