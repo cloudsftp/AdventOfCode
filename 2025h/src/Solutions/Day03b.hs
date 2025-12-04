@@ -17,7 +17,7 @@ solve input =
 bankJoltage :: Bank -> Int
 bankJoltage bank =
   let digitOccurrences = digitPositions bank
-      largestDigit = 9
+      largestDigit = 2
       n = 3
       selectedDigits =
         selectNDigits largestDigit
@@ -32,6 +32,7 @@ data Digit = Digit { digit :: Int
                    } deriving (Show, Eq, Ord)
 
 selectNDigits :: Int -> Int -> (Int, Int) -> Map Int [Int] -> [Digit]
+selectNDigits 0 _ _ _ = []
 selectNDigits _ n _ _ | n <= 0 = []
 selectNDigits d n (l, r) positions
   | r - l <= n = filter digitIsInRange $ allDigits positions
