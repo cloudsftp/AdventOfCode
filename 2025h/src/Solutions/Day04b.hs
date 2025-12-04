@@ -3,7 +3,7 @@ module Solutions.Day04b
   ) where
 
 import Data.Set (Set, fromList, fold)
-import qualified Data.Set as Set (empty, insert, member, size)
+import qualified Data.Set as Set (empty, insert, member, size, delete)
 import Debug.Trace
 import Data.Ix
 
@@ -16,18 +16,24 @@ solve input =
   in trace ("finished parsing"
             ++ "\n boxes: " ++ show boxes
             ++ "\n")
-     countAccessibleBoxes boxes
+     countRemovedBoxes boxes
 
-countAccessibleBoxes :: Positions -> Int
-countAccessibleBoxes boxes =
-  let accessibleBoxes = foldl (collectAccessibleBoxes boxes) Set.empty boxes
-  in trace (" accessible Boxes: " ++ show accessibleBoxes
-           ++ "\n field: \n" ++ printField boxes accessibleBoxes
-           ++ "\n")
-             
-           Set.size accessibleBoxes
+countRemovedBoxes :: Positions -> Int
+countRemovedBoxes boxes =
+  let recurse boxes count =
+        let accessible = foldl (collectAccessibleBoxes boxes) Set.empty boxes
+            newBoxes = foldl (flip Set.delete) boxes accessible
+            numAccessible = Set.size accessible
+            newCount = count + numAccessible
+        in trace (" accessible Boxes: " ++ show accessible
+                 ++ "\n field: \n" ++ printField boxes accessible
+                 ++ "\n")
+                (if numAccessible <= 0
+                 then count
+                 else recurse newBoxes newCount)
+  in recurse boxes 0
 
-collectAccessibleBoxes :: Positions -> Positions -> Position -> Set Position
+collectAccessibleBoxes :: Positions -> Positions -> Position -> Positions
 collectAccessibleBoxes boxes accessible position =
   let adjacent = adjacentBoxes position boxes
       isAccessible = Set.size adjacent < 4
