@@ -3,29 +3,31 @@ module Solutions.Day04a
   ) where
 
 import Data.Set (Set, fromList, fold)
-import qualified Data.Set as Set (empty, insert, member, size, union)
+import qualified Data.Set as Set (empty, insert, member, size)
 import Debug.Trace
 import Data.Ix
 
+type Position = (Int, Int)
+type Positions = Set Position
+
 solve :: String -> Int
 solve input =
-  let (empty, boxes) = parseInput input
+  let boxes = parseInput input
   in trace ("finished parsing"
-            ++ "\n empty: " ++ show empty
             ++ "\n boxes: " ++ show boxes
             ++ "\n")
-     countAccessibleBoxes (empty, boxes)
+     countAccessibleBoxes boxes
 
-countAccessibleBoxes :: Data -> Int
-countAccessibleBoxes (empty, boxes) =
+countAccessibleBoxes :: Positions -> Int
+countAccessibleBoxes boxes =
   let accessibleBoxes = foldl (collectAccessibleBoxes boxes) Set.empty boxes
   in trace (" accessible Boxes: " ++ show accessibleBoxes
-           ++ "\n field: \n" ++ printField (empty, boxes) accessibleBoxes
+           ++ "\n field: \n" ++ printField boxes accessibleBoxes
            ++ "\n")
              
            Set.size accessibleBoxes
 
-collectAccessibleBoxes :: Set Position -> Set Position -> Position -> Set Position
+collectAccessibleBoxes :: Positions -> Positions -> Position -> Set Position
 collectAccessibleBoxes boxes accessible position =
   let adjacent = adjacentBoxes position boxes
       isAccessible = Set.size adjacent < 4
@@ -33,7 +35,7 @@ collectAccessibleBoxes boxes accessible position =
      then Set.insert position accessible
      else accessible
 
-adjacentBoxes :: Position -> Set Position -> Set Position
+adjacentBoxes :: Position -> Positions -> Positions
 adjacentBoxes (i, j) boxes =
   let isBox = flip Set.member boxes
   in fromList $ filter isBox [ (i - 1, j)
@@ -47,25 +49,22 @@ adjacentBoxes (i, j) boxes =
 
 -- parsing
 
-type Position = (Int, Int)
-type Data = (Set Position, Set Position)
 
-parseInput :: String -> Data
-parseInput = snd . foldl parseLines (0, (Set.empty, Set.empty)) . lines
+parseInput :: String -> Positions
+parseInput = snd . foldl parseLines (0, Set.empty) . lines
 
-parseLines :: (Int, Data) -> String -> (Int, Data)
+parseLines :: (Int, Positions) -> String -> (Int, Positions)
 parseLines (i, acc) lines' =
   let (_, newAcc) = foldl parseLine ((i, 0), acc) lines'
       newI = i + 1
   in (newI, newAcc)
 
-parseLine :: (Position, Data) -> Char -> (Position, Data)
-parseLine (position, (empty, boxes)) c =
+parseLine :: (Position, Positions) -> Char -> (Position, Positions)
+parseLine (position, boxes) c =
   let (i, j) = position
-      insert = Set.insert position
       nextData
-        | c == '.'  = (insert empty, boxes)
-        | c == '@'  = (empty, insert boxes)
+        | c == '.' = boxes
+        | c == '@' = Set.insert position boxes
         | otherwise = error "no"
       nextPosition = (i, j + 1)
  
@@ -73,22 +72,19 @@ parseLine (position, (empty, boxes)) c =
 
 -- visualizing
 
-printField :: Data -> Set Position -> String
-printField (empty, boxes) accessible =
-  let allPositions = Set.union empty boxes
-      height = fold (max . fst) 0 allPositions
-      collect output i = output ++ "\n" ++ printLine i (empty, boxes) accessible
+printField :: Positions -> Set Position -> String
+printField boxes accessible =
+  let height = fold (max . fst) 0 boxes
+      collect output i = output ++ "\n" ++ printLine i boxes accessible
   in foldl collect "" $ range (0, height)
 
-printLine :: Int -> Data -> Set Position -> String
-printLine i (empty, boxes) accessible =
-  let allPositions = Set.union empty boxes
-      width = fold (max . snd) 0 allPositions
+printLine :: Int -> Positions -> Positions -> String
+printLine i boxes accessible =
+  let width = fold (max . snd) 0 boxes
       symbol j
        | Set.member (i, j) accessible = "X"
        | Set.member (i, j) boxes = "@"
-       | Set.member (i, j) empty = "."
-       | otherwise = error "should be in at least one of the sets"
+       | otherwise = "."
       collect output j = output ++ symbol j
   in foldl collect "" $ range (0, width)
 
