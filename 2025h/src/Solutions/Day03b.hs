@@ -24,7 +24,7 @@ bankJoltage bank =
                       n
                       (0, length bank)
                       digitOccurrences
-  in trace ("occurrences: " ++ show digitOccurrences ++ "\nselected digits: " ++ show selectedDigits)
+  in trace ("selected digits: " ++ show selectedDigits ++ "\n")
            0 -- compute number from selected digits
 
 data Digit = Digit { digit :: Int
@@ -32,7 +32,7 @@ data Digit = Digit { digit :: Int
                    } deriving (Show, Eq, Ord)
 
 selectNDigits :: Int -> Int -> (Int, Int) -> Map Int [Int] -> [Digit]
-selectNDigits _ 0 _ _ = []
+selectNDigits _ n _ _ | n <= 0 = []
 selectNDigits d n (l, r) positions
   | r - l <= n = filter digitIsInRange $ allDigits positions
   | otherwise =
@@ -41,11 +41,36 @@ selectNDigits d n (l, r) positions
     in
       if numDigits >= n
       then take n digits
-      else []
+      else selectNDigitsRecursion d (n - length digits) (l, r) positions digits
   where digitIsInRange Digit { position = p } = p >= l && p < r
 
--- choose as much digits d as possible
--- if n still greater, recurse from right to left on ranges of left-over digits
+data DigitCollector = DigitCollector { digits :: [Digit]
+                                     , lastPosition :: Int
+                                     , nLeft :: Int
+                                     } deriving (Show)
+
+selectNDigitsRecursion :: Int -> Int -> (Int, Int) -> Map Int [Int] -> [Digit] -> [Digit]
+selectNDigitsRecursion d n (l, r) positions ds =
+  let collect digit DigitCollector { digits = ds
+                                   , lastPosition = right
+                                   , nLeft = nLeft
+                                   } = let currentLeft = position digit + 1
+                                           recDigits = selectNDigits (d - 1) nLeft (currentLeft, right) positions
+                                       in trace ("collecting for d: " ++ show d ++ ", digits: " ++ show ds ++ ", lastPosition: " ++ show right ++ ", nLeft: " ++ show nLeft)
+                                          DigitCollector { digits = recDigits ++ digit:ds
+                                                         , lastPosition = currentLeft
+                                                         , nLeft = nLeft - length recDigits
+                                                         }
+      DigitCollector { digits = collectedDigits
+                     , lastPosition = firstDigitPosition
+                     , nLeft = nLeftCollected
+                     } = foldr collect (DigitCollector { digits = []
+                                                       , lastPosition = r
+                                                       , nLeft = n
+                                                       }) ds
+  in trace ("collected digits: " ++ show collectedDigits ++ ", also have n left: " ++ show nLeftCollected)
+     selectNDigits nLeftCollected (d - 1) (l, firstDigitPosition) positions
+     ++ collectedDigits
 
 matchingDigits :: Int -> Map Int [Int] -> [Digit]
 matchingDigits d positions = map (toDigit d) $ positions ! d
@@ -54,7 +79,7 @@ allDigits :: Map Int [Int] -> [Digit]
 allDigits = foldrWithKey collectDigits []
 
 collectDigits :: Int -> [Int] -> [Digit] -> [Digit]
-collectDigits d positions ds = foldl (\digits p -> toDigit d p:digits)
+collectDigits d positions ds = foldl (\acc p -> toDigit d p:acc)
                                      ds positions
 
 toDigit :: Int -> Int -> Digit
@@ -67,20 +92,20 @@ digitPositions bank =
   let collectOccurrences d = insert d (occurrences d bank)
   in foldl (flip collectOccurrences) empty $ range (1, 9)
 
-data DigitCounter = DigitCollecter { current :: Int
-                                   , collected :: [Int]
-                                   } deriving (Show)
+data PositionCollector = PositionCollector { current :: Int
+                                      , collected :: [Int]
+                                      } deriving (Show)
 
 occurrences :: Int -> Bank -> [Int]
 occurrences v bank = collected $
-  foldl (\DigitCollecter { current = pos, collected = coll } d ->
+  foldl (\PositionCollector { current = pos, collected = coll } d ->
            let newPosition = pos + 1
                newCollected = if v == d
                               then pos:coll
                               else coll
-           in DigitCollecter { current = newPosition, collected = newCollected }
+           in PositionCollector { current = newPosition, collected = newCollected }
         )
-        (DigitCollecter { current = 0, collected = [] })
+        (PositionCollector { current = 0, collected = [] })
         bank
 
 -- parsing
