@@ -3,26 +3,23 @@ module Solutions.Day05b
   ) where
 
 import Data.List.Split (splitWhen)
-import Data.Ix (Ix(range))
-import Debug.Trace
-
+import Data.List (sortOn)
 
 solve :: String -> Int
 solve input =
   let (ranges, _) = parseInput input
-  in snd $ foldl countUniqueIds ([], 0) ranges
+  in numIds $ foldl collectDisjointRanges [] $ sortOn fst ranges
 
-countUniqueIds :: ([Range], Int) -> Range -> ([Range], Int)
-countUniqueIds (ranges, count) (l, r) =
-  let uniqueIds = filter (not . inAnyRange ranges) $ range (l, r)
-  in trace ("unique ids: " ++ show uniqueIds)
-           ((l, r):ranges, count + length uniqueIds)
+numIds :: [Range] -> Int
+numIds = sum . map (\(l, r) -> r - l + 1)
 
-inAnyRange :: [Range] -> Int -> Bool
-inAnyRange ranges v = any (`inRange` v) ranges
-
-inRange :: Range -> Int -> Bool
-inRange (l, r) v = l <= v && v <= r
+collectDisjointRanges :: [Range] -> Range -> [Range]
+collectDisjointRanges [] range = [range]
+collectDisjointRanges collected (l, r)
+  | rCut < l  = (l, r):collected
+  | rCut >= r = collected
+  | otherwise = (rCut + 1, r):collected
+  where (_, rCut):_ = collected
 
 -- parsing
 
