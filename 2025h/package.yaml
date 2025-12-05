@@ -21,6 +21,7 @@ description: Please see the README on GitHub at <https://github.com/githubuser/2
 
 dependencies:
   - base
+  - split
   - filepath
   - containers
 
