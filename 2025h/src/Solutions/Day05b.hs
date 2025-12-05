@@ -3,14 +3,26 @@ module Solutions.Day05b
   ) where
 
 import Data.List.Split (splitWhen)
+import Data.Ix (Ix(range))
+import Debug.Trace
+
 
 solve :: String -> Int
 solve input =
   let (ranges, _) = parseInput input
-  in sum $ map rangeSize ranges
+  in snd $ foldl countUniqueIds ([], 0) ranges
 
-rangeSize :: Range -> Int
-rangeSize (l, r) = r - l + 1
+countUniqueIds :: ([Range], Int) -> Range -> ([Range], Int)
+countUniqueIds (ranges, count) (l, r) =
+  let uniqueIds = filter (not . inAnyRange ranges) $ range (l, r)
+  in trace ("unique ids: " ++ show uniqueIds)
+           ((l, r):ranges, count + length uniqueIds)
+
+inAnyRange :: [Range] -> Int -> Bool
+inAnyRange ranges v = any (`inRange` v) ranges
+
+inRange :: Range -> Int -> Bool
+inRange (l, r) v = l <= v && v <= r
 
 -- parsing
 
