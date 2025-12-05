@@ -3,13 +3,15 @@ module Solutions.Day05a
   ) where
 
 import Data.List.Split (splitWhen)
-import Debug.Trace
 
 solve :: String -> Int
 solve input =
-  let parsed = parseInput input
-  in trace ("parsed input: " ++ show parsed)
-        0
+  let (ranges, ids) = parseInput input
+      fresh id = any (`inRange` id) ranges
+  in length $ filter fresh ids
+
+inRange :: Range -> Int -> Bool
+inRange (l, r) v = l <= v && v <= r
 
 -- parsing
 
