@@ -71,7 +71,7 @@ parseLine (position, boxes) c =
       nextData
         | c == '.' = boxes
         | c == '@' = Set.insert position boxes
-        | otherwise = error "no"
+        | otherwise = error ("unexpected character " ++ show c ++ " in input data")
       nextPosition = (i, j + 1)
  
   in (nextPosition, nextData)
