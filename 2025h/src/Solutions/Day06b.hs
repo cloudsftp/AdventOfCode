@@ -11,7 +11,8 @@ type Problem = (Operator, [Int])
 solve :: String -> Int
 solve input =
   let problems = parseInput input
-  in sum $ map evaluate problems
+  in trace ("problems: " ++ show problems)
+     sum $ map evaluate problems
 
 evaluate :: Problem -> Int
 evaluate (Add, values) = sum values
@@ -21,27 +22,30 @@ evaluate (Multiply, values) = product values
 
 parseInput :: String -> [Problem]
 parseInput input =
-  let splitLines = reverse $ map splitLine $ lines input
+  let splitLines = reverse $ map reverse $ lines input
   
       operatorLine = head splitLines
-      operators = map operator operatorLine
+      valueLines = (reverse . tail) splitLines
       
-      valueLines = tail splitLines
-      valueLists = map (map read) valueLines
-      
-  in collectProblems operators valueLists []
+  in collectProblems operatorLine valueLines [] []
 
-collectProblems :: [Operator] -> [[Int]] -> [Problem] -> [Problem]
-collectProblems [] _ problems = problems
-collectProblems (o:os) valueLists problems =
-  let (values, updatedValueLists) = foldl (\ (values, updatedValueLists) (v:vs)
-                                           -> (v:values, vs:updatedValueLists))
-                                    ([], []) valueLists
-      problem = (o, values)
-  in collectProblems os updatedValueLists (problem:problems)
-
-splitLine :: String -> [String]
-splitLine = filter (not . null) . splitOn [' ']
+collectProblems :: String -> [String] -> [Int] -> [Problem] -> [Problem]
+collectProblems [] _ _ problems = problems
+collectProblems (o:os) valueLines values problems = 
+  let
+    (digits, updatedValueLines) = foldl (\(digits, updatedValueLines) (d:ds)
+                                           -> (d:digits, ds:updatedValueLines))
+                                  ([], []) valueLines
+  in if o == ' ' && all (== ' ') digits
+  then collectProblems os updatedValueLines [] problems
+  else let
+    value = read $ filter (/= ' ') digits
+    newValues = trace ("adding " ++ show value ++ " to values " ++ show values) value:values
+  in if o == ' '
+  then collectProblems os updatedValueLines newValues problems
+  else let
+    problem = (operator [o], newValues)
+  in collectProblems os updatedValueLines newValues (problem:problems)
 
 operator :: String -> Operator
 operator "*" = Multiply
