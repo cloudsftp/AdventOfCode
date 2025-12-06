@@ -22,34 +22,36 @@ evaluate (Multiply, values) = product values
 
 parseInput :: String -> [Problem]
 parseInput input =
-  let splitLines = reverse $ map reverse $ lines input
+  let splitLines = reverse $ lines input
   
       operatorLine = head splitLines
       valueLines = (reverse . tail) splitLines
       
-  in trace ("value lines " ++ show valueLines)
-     collectProblems operatorLine valueLines [] []
+  in collectProblems operatorLine valueLines Nothing []
 
-collectProblems :: String -> [String] -> [Int] -> [Problem] -> [Problem]
+collectProblems :: String -> [String] -> Maybe Problem -> [Problem] -> [Problem]
 collectProblems [] _ _ problems = problems
-collectProblems (o:os) valueLines values problems = 
-  let
-    (digits, updatedValueLinesRev) = foldl (\(digits, updatedValueLines) (d:ds)
-                                           -> (d:digits, ds:updatedValueLines))
-                                  ([], []) valueLines
-    updatedValueLines = reverse updatedValueLinesRev
-  in if o == ' ' && all (== ' ') digits
-  then collectProblems os updatedValueLines [] problems
-  else let
-    value = read $ reverse $ filter (/= ' ') digits
-    newValues = value:values
-  in if o == ' '
-  then collectProblems os updatedValueLines newValues problems
-  else let
-    problem = (operator [o], newValues)
-  in collectProblems os updatedValueLines newValues (problem:problems)
+collectProblems (o:os) valueLines Nothing problems =
+  let op = operator o
+      (Just value, updatedValueLines) = scrapeValue valueLines
+  in collectProblems os updatedValueLines (Just (op, [value])) problems
+collectProblems (_:os) valueLines (Just (op, values)) problems =
+  let (maybeValue, updatedValueLines) = scrapeValue valueLines
+  in case maybeValue of
+    Nothing -> collectProblems os updatedValueLines Nothing ((op, values):problems)
+    Just value -> collectProblems os updatedValueLines (Just (op, value:values)) problems
 
-operator :: String -> Operator
-operator "*" = Multiply
-operator "+" = Add
+
+scrapeValue :: [String] -> (Maybe Int, [String])
+scrapeValue valueLines =
+  let (digits, updatedValueLines) = foldr (\(d:ds) (digits, updatedValueLines) 
+                                           -> (d:digits, ds:updatedValueLines))
+                                    ([], []) valueLines
+  in if all (== ' ') digits
+  then (Nothing, updatedValueLines)
+  else (Just $ read $ filter (/= ' ') digits, updatedValueLines)
+
+operator :: Char -> Operator
+operator '*' = Multiply
+operator '+' = Add
 
