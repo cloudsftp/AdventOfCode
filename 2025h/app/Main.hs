@@ -17,13 +17,14 @@ import qualified Solutions.Day04a (solve)
 import qualified Solutions.Day04b (solve)
 import qualified Solutions.Day05a (solve)
 import qualified Solutions.Day05b (solve)
+import qualified Solutions.Day06a (solve)
 
 main :: IO ()
 main = do
   args <- getArgs
   
   if length args < 3 then do
-    putStrLn "Please specify the problem id (1-12), the part (a | b), and the input type (small | big)"
+    putStrLn "Please specify the problem id (1-12), the part (a | b), and the input type (small | debug | big)"
     return ()
     
   else do
@@ -43,6 +44,7 @@ main = do
                              , (( 4, B), Solutions.Day04b.solve)
                              , (( 5, A), Solutions.Day05a.solve)
                              , (( 5, B), Solutions.Day05b.solve)
+                             , (( 6, A), Solutions.Day06a.solve)
                              ]
         function = functions ! (exerciseId, exercisePart)
         result = function input :: Int
