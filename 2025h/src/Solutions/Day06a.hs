@@ -10,8 +10,12 @@ type Problem = (Operator, [Int])
 
 solve :: String -> Int
 solve input =
-  let parsed = parseInput input
-  in trace ("parsed: " ++ show parsed) 0
+  let problems = parseInput input
+  in sum $ map evaluate problems
+
+evaluate :: Problem -> Int
+evaluate (Add, values) = sum values
+evaluate (Multiply, values) = product values
 
 -- parsing
 
@@ -25,8 +29,7 @@ parseInput input =
       valueLines = tail splitLines
       valueLists = map (map read) valueLines
       
-  in trace ("split lines: " ++ show splitLines)
-     collectProblems operators valueLists []
+  in collectProblems operators valueLists []
 
 collectProblems :: [Operator] -> [[Int]] -> [Problem] -> [Problem]
 collectProblems [] _ problems = problems
