@@ -27,20 +27,22 @@ parseInput input =
       operatorLine = head splitLines
       valueLines = (reverse . tail) splitLines
       
-  in collectProblems operatorLine valueLines [] []
+  in trace ("value lines " ++ show valueLines)
+     collectProblems operatorLine valueLines [] []
 
 collectProblems :: String -> [String] -> [Int] -> [Problem] -> [Problem]
 collectProblems [] _ _ problems = problems
 collectProblems (o:os) valueLines values problems = 
   let
-    (digits, updatedValueLines) = foldl (\(digits, updatedValueLines) (d:ds)
+    (digits, updatedValueLinesRev) = foldl (\(digits, updatedValueLines) (d:ds)
                                            -> (d:digits, ds:updatedValueLines))
                                   ([], []) valueLines
+    updatedValueLines = reverse updatedValueLinesRev
   in if o == ' ' && all (== ' ') digits
   then collectProblems os updatedValueLines [] problems
   else let
-    value = read $ filter (/= ' ') digits
-    newValues = trace ("adding " ++ show value ++ " to values " ++ show values) value:values
+    value = read $ reverse $ filter (/= ' ') digits
+    newValues = value:values
   in if o == ' '
   then collectProblems os updatedValueLines newValues problems
   else let
@@ -50,5 +52,4 @@ collectProblems (o:os) valueLines values problems =
 operator :: String -> Operator
 operator "*" = Multiply
 operator "+" = Add
-
 
