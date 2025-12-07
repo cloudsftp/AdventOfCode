@@ -2,7 +2,6 @@ module Solutions.Day06b
   ( solve
   ) where
 
-import Data.List.Split (splitOn)
 import Debug.Trace
 
 data Operator = Add | Multiply deriving (Show)
