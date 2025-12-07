@@ -2,23 +2,42 @@ module Solutions.Day07b
   ( solve
   ) where
 
-import Data.Set (Set, empty, singleton, member, insert, delete)
+import Data.Set (Set, empty, member, insert)
 import Debug.Trace
 
 solve :: String -> Int
 solve input =
   let (startPosition, splitterPositions) = parseInput input
   in trace ("start position: " ++ show startPosition ++ " splitter positions: " ++ show splitterPositions)
-     length $ foldl step [startPosition] splitterPositions
+     sum $ map snd $ foldl step [(startPosition, 1)] splitterPositions
 
-step :: [Int] -> Set Int -> [Int]
+step :: [(Int, Int)] -> Set Int -> [(Int, Int)]
 step beamPositions splitterPositions =
-  -- trace ("beams " ++ show beamPositions ++ ", splitters " ++ show splitterPositions)
-  foldr (\p beamPositions ->
-        if member p splitterPositions
-        then (p-1):(p+1):beamPositions
-        else p:beamPositions)
+  foldr (\
+            (p, c) beamPositions ->
+            if member p splitterPositions
+            then
+              let updated = addBeam (p - 1, c) $ addBeam (p + 1, c) beamPositions
+              in trace ("splitting " ++ show (p, c) ++ " on position " ++ show p ++ "\n" ++ show beamPositions ++ " -> " ++ show updated)
+                 updated
+            else
+              let updated = addBeam (p, c) beamPositions
+              in trace ("not splitting " ++ show (p, c) ++ " on position " ++ show p ++ show beamPositions ++ "\n -> " ++ show updated)
+                 updated
+        )
   [] beamPositions
+
+addBeam :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+addBeam (p, c) existingBeams =
+  if any ((==p) . fst) existingBeams
+  then foldr (\
+                 (ep, ec) beams ->
+                 if ep == p
+                 then (ep, ec + c):beams
+                 else (ep, ec):beams
+             )
+       [] existingBeams
+  else (p, c):existingBeams
 
 -- parsing
 
