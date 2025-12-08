@@ -34,8 +34,8 @@ connectNodes nodes ((i, j):rest) (groupIds, elementIds) =
   then
     let Node xi _ _ = nodes !! i
         Node xj _ _ = nodes !! j
-    in trace ("two groups? " ++ show elementIds ++ " (i, j): " ++ show (i, j))
-       float2Int $ xi * xj
+    in trace ("two groups? " ++ show elementIds ++ " (i, j): " ++ show (i, j) ++ " xi: " ++ show xi ++ " xj: " ++ show xj)
+       float2Int xi * float2Int xj
   else
     let groupIdI = groupIds ! i
         groupIdJ = groupIds ! j
