@@ -21,6 +21,7 @@ import qualified Solutions.Day06a (solve)
 import qualified Solutions.Day06b (solve)
 import qualified Solutions.Day07a (solve)
 import qualified Solutions.Day07b (solve)
+import qualified Solutions.Day08a (solve)
 
 main :: IO ()
 main = do
@@ -31,12 +32,6 @@ main = do
     return ()
     
   else do
-    let exerciseId = read (head args) :: ID
-        exercisePart = read (capitalize $ args !! 1) :: Part
-        exampleType = read (capitalize $ args !! 2) :: ExampleType
-
-    input <- readExample 2025 exerciseId exampleType
-
     let functions = fromList [ (( 1, A), Solutions.Day01a.solve)
                              , (( 1, B), Solutions.Day01b.solve)
                              , (( 2, A), Solutions.Day02a.solve)
@@ -51,10 +46,17 @@ main = do
                              , (( 6, B), Solutions.Day06b.solve)
                              , (( 7, A), Solutions.Day07a.solve)
                              , (( 7, B), Solutions.Day07b.solve)
+                             , (( 8, A), Solutions.Day07b.solve)
                              ]
-        function = functions ! (exerciseId, exercisePart)
-        result = function input :: Int
 
+        exerciseId = read (head args) :: ID
+        exercisePart = read (capitalize $ args !! 1) :: Part
+        exampleType = read (capitalize $ args !! 2) :: ExampleType
+
+        input = readExample 2025 exerciseId exampleType
+        function = functions ! (exerciseId, exercisePart)
+
+    result <- fmap function input
     putStrLn $ "The result is: " ++ show result
 
 

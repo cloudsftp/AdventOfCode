@@ -63,4 +63,3 @@ parseSplitterLine line =
 
 enumerate :: [a] -> [(Int, a)]
 enumerate = snd . foldl (\(pos, acc) e -> (pos + 1, (pos, e):acc)) (0, [])
-  
