@@ -46,7 +46,7 @@ main = do
                              , (( 6, B), Solutions.Day06b.solve)
                              , (( 7, A), Solutions.Day07a.solve)
                              , (( 7, B), Solutions.Day07b.solve)
-                             , (( 8, A), Solutions.Day07b.solve)
+                             , (( 8, A), Solutions.Day08a.solve)
                              ]
 
         exerciseId = read (head args) :: ID
