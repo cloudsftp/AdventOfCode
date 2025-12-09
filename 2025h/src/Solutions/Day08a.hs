@@ -2,13 +2,12 @@ module Solutions.Day08a
   ( solve
   ) where
 
-import Debug.Trace
 import Data.List.Split (splitWhen)
 import Data.List (sortOn, sortBy)
 import Data.Map (Map, empty, insert, delete, fromList, (!))
 import Data.Set (Set, singleton, union)
 
-data Node = Node Float Float Float deriving (Show)
+data Node = Node Int Int Int deriving (Show)
 
 solve :: String -> Int
 solve input =
@@ -25,8 +24,7 @@ solve input =
         $ foldl (\acc circuit -> length circuit:acc)
                 [] circuits
       
-  in trace ("nodes: " ++ show nodes ++ "\npairs: " ++ show pairs ++ "\n\ncircuits: " ++ show circuits ++ "\ncircuit sizes: ")
-     product $ take 3 circuitSizes
+  in product $ take 3 circuitSizes
 
 connectNodes :: [Node] -> [(Int, Int)] -> Circuits -> Circuits
 connectNodes _ [] circuits = circuits
@@ -67,15 +65,15 @@ computeDistances nodes =
         $ sortOn fst
         $ collectPairDistances nodes indexPairs
 
-collectPairDistances :: [Node] -> [(Int, Int)] -> [(Float, (Int, Int))]
+collectPairDistances :: [Node] -> [(Int, Int)] -> [(Int, (Int, Int))]
 collectPairDistances _ [] = []
 collectPairDistances nodes ((i, j):rest) =
   let dist = distance (nodes !! i) (nodes !! j)
   in (dist, (i, j)):collectPairDistances nodes rest
 
-distance :: Node -> Node -> Float
+distance :: Node -> Node -> Int
 distance (Node xa ya za) (Node xb yb zb) =
-  sqrt $ (xa - xb) ^ 2 + (ya - yb) ^ 2 + (za - zb) ^ 2
+  (xa - xb) ^ 2 + (ya - yb) ^ 2 + (za - zb) ^ 2
 
 enumerate :: [a] -> [(Int, a)]
 enumerate = snd . foldl (\(pos, acc) e -> (pos + 1, (pos, e):acc)) (0, [])
