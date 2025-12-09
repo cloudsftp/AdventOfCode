@@ -4,7 +4,6 @@ module Solutions.Day09a
 
 import Data.List.Split (splitWhen)
 import Debug.Trace
-import Data.List (sortBy, sortOn)
 
 type Tile = (Int, Int)
 
@@ -12,17 +11,10 @@ solve :: String -> Int
 solve input =
   let tiles = parseInput input
 
-      topLeft = head $ sortOn (\(x, y) -> (x, y)) tiles
-      topRight = head $ sortOn (\(x, y) -> (-x, y)) tiles
-      bottomLeft = head $ sortOn (\(x, y) -> (x, -y)) tiles
-      bottomRight = head $ sortOn (\(x, y) -> (-x, -y)) tiles
+      indexPairs = [(i, j) | i <- [0..(length tiles - 1)], j <- [i..(length tiles - 1)]]
         
-  in trace ("tiles: " ++ show tiles
-            ++ " top left: " ++ show topLeft
-            ++ " top right: " ++ show topRight
-            ++ " bottom left: " ++ show bottomLeft
-            ++ " bottom right: " ++ show bottomRight)
-     max (area topLeft bottomRight) (area topRight bottomLeft)
+  in trace ("tiles: " ++ show tiles)
+     foldl max 0 [area (tiles !! i) (tiles !! j) | (i, j) <- indexPairs]
 
 -- areas
 
