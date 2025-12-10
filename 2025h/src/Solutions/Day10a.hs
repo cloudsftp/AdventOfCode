@@ -5,23 +5,50 @@ module Solutions.Day10a
 import Data.List.Split (splitWhen)
 import Debug.Trace
 
-import Data.Map (Map)
+import Data.Map (Map, (!))
 import qualified Data.Map as Map (empty, insert)
-import Data.Set (Set)
-import qualified Data.Set as Set (empty, insert, member)
+import Data.Set (Set, powerSet)
+import qualified Data.Set as Set (empty, insert, member, map, filter, fold)
 
 
 solve :: String -> Int
 solve input =
   let machines = parseInput input
   in trace ("machines: " ++ show machines)
-     0
+     sum $ map minPresses machines
 
 type Button = Set Int
 data Machine = Machine { numberOfLights :: Int
                        , indicators :: Map Int Bool
                        , buttons :: [Button]
                        } deriving (Show)
+
+minPresses :: Machine -> Int
+minPresses machine =
+  let buttonIndices = foldr Set.insert Set.empty [0..(length (buttons machine) - 1)]
+      combinations = powerSet buttonIndices
+
+      validCombinations = Set.filter (checkValid machine) combinations
+      
+  in minimum $ Set.map length validCombinations
+
+
+checkValid :: Machine -> Set Int -> Bool
+checkValid machine buttonIndices =
+  let initialIndicators = foldr (`Map.insert` False) Map.empty [0..numberOfLights machine - 1]
+  
+      toggleIndicator indicators' i =
+        let currentValue = indicators' ! i
+            newValue = not currentValue
+        in Map.insert i newValue indicators'
+        
+      toggleIndicators :: Map Int Bool -> Int -> Map Int Bool
+      toggleIndicators indicators' i =
+        foldl toggleIndicator indicators' $ buttons machine !! i
+        
+      simulated = foldl toggleIndicators initialIndicators buttonIndices
+      
+  in simulated == indicators machine
 
 -- parsing
 
@@ -49,7 +76,7 @@ parseLine line =
       parseButton buttonPart =
         let numberParts = splitWhen (==',') buttonPart
             button = foldr (Set.insert . read) Set.empty numberParts
-        in trace ("number parts: " ++ show numberParts) button
+        in button
         
       buttons' = map parseButton buttonParts
       
