@@ -45,6 +45,8 @@ library
       Solutions.Day08b
       Solutions.Day09a
       Solutions.Day09b
+      Solutions.Day10a
+      Solutions.Day10b
       Text
   other-modules:
       Paths_2025h
