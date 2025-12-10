@@ -3,10 +3,8 @@ module Solutions.Day09b
   ) where
 
 import Data.List.Split (splitWhen)
-import Data.List (intersperse, sortOn)
+import Data.List (sortOn)
 import Debug.Trace
-import Data.Set (Set, empty, insert, member)
-import qualified Data.Set as Set (filter)
 
 type Tile = (Int, Int)
 
@@ -18,63 +16,25 @@ solve input =
                     | i <- [0..(length corners - 1)]
                     , j <- [i..(length corners - 1)]]
 
-      areas = sortOn (\(_, area) -> -area)
+      areas = sortOn (\(_, area') -> -area')
             $ map (\(i, j) -> ((i, j), area i j)) cornerPairs
 
-      (horizontalBorderTiles, verticalBorderTiles) = collectBorders corners
-      possibleAreas = filterAreas horizontalBorderTiles verticalBorderTiles areas
-
+      possibleAreas = filterAreas corners areas
         
   in trace ("corners: " ++ show corners)
-            -- ++ "\ncorner pairs: " ++ show cornerPairs
-            -- ++ "\n\nhorizontal: " ++ show horizontalBorderTiles
-            -- ++ "\nvertical: " ++ show verticalBorderTiles)
      snd $ head possibleAreas
 
 type Area = ((Tile, Tile), Int)
 type Areas = [Area]
-filterAreas :: Set Tile -> Set Tile -> Areas -> Areas
-filterAreas vertical horizontal = filter (areaPossible vertical horizontal)
+filterAreas :: [Tile] -> Areas -> Areas
+filterAreas corners = filter (areaPossible corners)
 
-areaPossible :: Set Tile -> Set Tile -> Area -> Bool
-areaPossible horizontal vertical (((xi, yi), (xj, yj)), _) =
+areaPossible :: [Tile] -> Area -> Bool
+areaPossible corners (((xi, yi), (xj, yj)), _) =
   let (xSmall, xBig) = orderTuple (xi, xj)
       (ySmall, yBig) = orderTuple (yi, yj)
 
-      rectBorderTiles =
-        [(xSmall, y) | y <- [ySmall..yBig]] ++
-        [(xBig, y) | y <- [ySmall..yBig]] ++
-        [(x, ySmall) | x <- [xSmall..xBig]] ++
-        [(x, yBig) | x <- [xSmall..xBig]]
-
-  in trace ("checking area: " ++ show ((xi, yi), (xj, yj)))
-     all (inside horizontal vertical) rectBorderTiles
-
-inside :: Set Tile -> Set Tile -> Tile -> Bool
-inside horizontal vertical (x, y) =
-  let crossHorizontal = Set.filter ((==x) . fst) horizontal
-      crossHorizontalUp = Set.filter ((>y) . snd) crossHorizontal
-      crossHorizontalDown = Set.filter ((<y) . snd) crossHorizontal
-  
-      crossVertical = Set.filter ((==y) . snd) vertical
-      crossVerticalRight = Set.filter ((>x) . fst) crossVertical
-      crossVerticalLeft = Set.filter ((<x) . fst) crossVertical
-
-  in trace ("checking tile " ++ show (x, y)
-            ++ "num crossing: "
-            ++ show ((length crossHorizontalUp), (length crossHorizontalDown), (length crossVerticalLeft), (length crossVerticalRight)))
-     member (x, y) crossHorizontal
-  || member (x, y) crossVertical
-  || (
-     odd (length crossHorizontalUp)
-  && odd (length crossHorizontalDown)
-  && odd (length crossVerticalLeft)
-  && odd (length crossVerticalRight)
-     )
-
-collectBorders :: [Tile] -> (Set Tile, Set Tile)
-collectBorders corners =
-  let cornerPairs = [(corners !! i, corners !! j)
+      cornerPairs = [(corners !! i, corners !! j)
                     | i <- [0..(length corners - 1)]
                     , j <- [0..(length corners - 1)]
                     , j == i + 1
@@ -82,18 +42,27 @@ collectBorders corners =
                           && j == 0)
                     ]
 
-      collect (horizontalBorderTiles, verticalBorderTiles) ((xi, yi), (xj, yj)) =
-        if xi == xj
-        then let (ySmall, yBig) = orderTuple (yi, yj)
-             in ( horizontalBorderTiles
-                , foldr insert verticalBorderTiles [(xi, y) | y <- [ySmall..yBig]]
-                )
-        else let (xSmall, xBig) = orderTuple (xi, xj)
-             in ( foldr insert horizontalBorderTiles [(x, yi) | x <- [xSmall..xBig]]
-                , verticalBorderTiles
-                )
-      
-   in foldl collect (empty, empty) cornerPairs
+  in trace ("checking area: " ++ show ((xi, yi), (xj, yj)))
+     all (not . borderCuts xSmall ySmall xBig yBig) cornerPairs
+
+borderCuts :: Int -> Int -> Int -> Int -> (Tile, Tile) -> Bool
+borderCuts xRectSmall yRectSmall xRectBig yRectBig ((xi, yi), (xj, yj)) =
+  -- trace ("checking border " ++ show (xi, yi) ++ " -- " ++ show (xj, yj) ++ " for area " ++ show ((xRectSmall, yRectSmall), (xRectBig, yRectBig))) $
+  if xi == xj
+  then -- check vertical cut
+    let x = xi
+        xInRect = xRectSmall < x && x < xRectBig
+
+        (yBorderSmall, yBorderBig) = orderTuple (yi, yj)
+        yInRect = yBorderSmall < yRectBig && yRectSmall < yBorderBig
+    in xInRect && yInRect
+  else -- check horizontal cut
+    let y = yi
+        yInRect = yRectSmall < y && y < yRectBig
+        
+        (xBorderSmall, xBorderBig) = orderTuple (xi, xj)
+        xInRect = xBorderSmall < xRectBig && xRectSmall < xBorderBig
+    in xInRect && yInRect
 
 orderTuple :: (Ord a) => (a, a) -> (a, a)
 orderTuple (i, j) = if i < j
@@ -114,24 +83,3 @@ parseTile :: String -> Tile
 parseTile line =
   let [x, y] = splitWhen (==',') line
   in (read x, read y)
-
--- visualizing
-
-renderField :: [Tile] -> (Set Tile, Set Tile) -> String
-renderField corners borderTiles =
-  let width = maximum (map fst corners) + 1
-      height = maximum (map snd corners) + 1
-  in concat
-  $ intersperse "\n"
-  $ map (renderLine corners borderTiles width) [0..height]
-
-renderLine :: [Tile] -> (Set Tile, Set Tile) -> Int -> Int -> String
-renderLine corners borderTiles width j =
-  map (renderTile corners borderTiles j) [0..width]
-
-renderTile :: [Tile] -> (Set Tile, Set Tile) -> Int -> Int -> Char
-renderTile corners (horizontalBorderTiles, verticalBorderTiles) j i =
-  if any (==(i, j)) corners then '+'
-  else if member (i, j) horizontalBorderTiles then '-'
-  else if member (i, j) verticalBorderTiles then '|'
-  else '.'
