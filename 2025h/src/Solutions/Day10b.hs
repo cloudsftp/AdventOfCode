@@ -18,8 +18,8 @@ solve input =
      sum $ map minPresses machines
 
 type Button = Set Int
-data Machine = Machine { numberOfLights :: Int
-                       , indicators :: Map Int Bool
+data Machine = Machine { numberOfCounters :: Int
+                       , counters :: Map Int Int
                        , buttons :: [Button]
                        } deriving (Show)
 
@@ -35,20 +35,19 @@ minPresses machine =
 
 checkValid :: Machine -> Set Int -> Bool
 checkValid machine buttonIndices =
-  let initialIndicators = foldr (`Map.insert` False) Map.empty [0..numberOfLights machine - 1]
+  let initialIndicators = foldr (`Map.insert` False) Map.empty [0..numberOfCounters machine - 1]
   
-      toggleIndicator indicators' i =
-        let currentValue = indicators' ! i
-            newValue = not currentValue
-        in Map.insert i newValue indicators'
-        
-      toggleIndicators :: Map Int Bool -> Int -> Map Int Bool
-      toggleIndicators indicators' i =
-        foldl toggleIndicator indicators' $ buttons machine !! i
-        
-      simulated = foldl toggleIndicators initialIndicators buttonIndices
+      -- toggleIndicator indicators' i =
+      --   let currentValue = indicators' ! i
+      --       newValue = not currentValue
+      --   in Map.insert i newValue indicators'
+      --
+      -- toggleIndicators indicators' i =
+      --   foldl toggleIndicator indicators' $ buttons machine !! i
+      --   
+      -- simulated = foldl toggleIndicators initialIndicators buttonIndices
       
-  in simulated == indicators machine
+  in False -- simulated == counters machine
 
 -- parsing
 
@@ -58,16 +57,6 @@ parseInput = map parseLine . lines
 parseLine :: String -> Machine
 parseLine line =
   let parts = splitWhen (==' ') line
-
-      indicatorsPart = filter (filterOutBrackets '[') $ head parts
-      numberOfLights' = length indicatorsPart
-
-      parseIndicator (i, acc) c = ( i + 1
-                                  , if c == '#'
-                                    then Map.insert i True acc
-                                    else Map.insert i False acc
-                                  )
-      indicators' = snd $ foldl parseIndicator (0, Map.empty) indicatorsPart
       
       buttonParts =
         map (filter (filterOutBrackets '('))
@@ -79,9 +68,15 @@ parseLine line =
         in button
         
       buttons' = map parseButton buttonParts
-      
-  in Machine { numberOfLights = numberOfLights'
-             , indicators = indicators'
+
+      countersPart = filter (filterOutBrackets '{') $ parts !! (length parts - 1)
+      countersValueParts = splitWhen (==',') countersPart
+      numberOfCounters' = trace ("counter value parts: " ++ show countersValueParts) length countersValueParts
+
+      counters' = foldr ((`Map.insert` 0) . read) Map.empty countersValueParts
+
+  in Machine { numberOfCounters = numberOfCounters'
+             , counters = counters'
              , buttons = buttons'
              }
 
