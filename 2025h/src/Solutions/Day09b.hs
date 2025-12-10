@@ -18,7 +18,7 @@ solve input =
                     | i <- [0..(length corners - 1)]
                     , j <- [i..(length corners - 1)]]
 
-      areas = sortOn snd
+      areas = sortOn (\(_, area) -> -area)
             $ map (\(i, j) -> ((i, j), area i j)) cornerPairs
 
       (horizontalBorderTiles, verticalBorderTiles) = collectBorders corners
@@ -42,10 +42,10 @@ areaPossible horizontal vertical (((xi, yi), (xj, yj)), _) =
       (ySmall, yBig) = orderTuple (yi, yj)
 
       rectBorderTiles =
-        [(xi, y) | y <- [ySmall..yBig]] ++
-        [(xj, y) | y <- [ySmall..yBig]] ++
-        [(x, yi) | x <- [xSmall..xBig]] ++
-        [(x, yj) | x <- [xSmall..xBig]]
+        [(xSmall, y) | y <- [ySmall..yBig]] ++
+        [(xBig, y) | y <- [ySmall..yBig]] ++
+        [(x, ySmall) | x <- [xSmall..xBig]] ++
+        [(x, yBig) | x <- [xSmall..xBig]]
 
   in trace ("checking area: " ++ show ((xi, yi), (xj, yj)))
      all (inside horizontal vertical) rectBorderTiles
@@ -60,11 +60,17 @@ inside horizontal vertical (x, y) =
       crossVerticalRight = Set.filter ((>x) . fst) crossVertical
       crossVerticalLeft = Set.filter ((<x) . fst) crossVertical
 
-  in trace ("num crossing: " ++ show ((length crossHorizontalUp), (length crossHorizontalDown), (length crossVerticalLeft), (length crossVerticalRight)))
+  in trace ("checking tile " ++ show (x, y)
+            ++ "num crossing: "
+            ++ show ((length crossHorizontalUp), (length crossHorizontalDown), (length crossVerticalLeft), (length crossVerticalRight)))
+     member (x, y) crossHorizontal
+  || member (x, y) crossVertical
+  || (
      odd (length crossHorizontalUp)
   && odd (length crossHorizontalDown)
   && odd (length crossVerticalLeft)
   && odd (length crossVerticalRight)
+     )
 
 collectBorders :: [Tile] -> (Set Tile, Set Tile)
 collectBorders corners =
