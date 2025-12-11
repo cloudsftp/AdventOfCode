@@ -2,9 +2,10 @@ module Solutions.Day11a
   ( solve
   ) where
 
-import Data.List.Split (splitWhen)
+import Data.List (delete)
+import Data.List.Split (splitOn)
 import Debug.Trace
-import Data.Map (Map, empty)
+import Data.Map (Map, empty, insert)
 
 solve :: String -> Int
 solve input =
@@ -17,7 +18,13 @@ solve input =
 parseInput :: String -> Map String [String]
 parseInput input =
   let connectionPairs = map parseLine $ lines input
-  in empty
+      collect (source, targets) = insert source targets
+  in foldr collect empty connectionPairs
 
 parseLine :: String -> (String, [String])
-parseLine line = ("", [])
+parseLine line =
+  let parts = splitOn " " line
+
+      source = delete ':' $ head parts
+      targets = tail parts
+  in (source, targets)
