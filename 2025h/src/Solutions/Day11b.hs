@@ -11,13 +11,20 @@ solve :: String -> Int
 solve input =
   let connections = parseInput input
   in trace ("connections: " ++ show connections)
-     numPaths connections "you"
+     numPaths connections False False "you" -- "svr"
 
-numPaths :: Map String [String] -> String -> Int
-numPaths _ "out" = 1
-numPaths connections position =
-  let next = connections ! position 
-  in sum $ map (numPaths connections) next
+numPaths :: Map String [String] -> Bool -> Bool -> String -> Int
+numPaths _ visitedDAC visitedFFT "out" =
+  if visitedDAC && visitedFFT
+  then 1
+  else 0
+numPaths connections visitedDAC visitedFFT position =
+  let visitedDAC' = visitedDAC || position == "fft"
+      visitedFFT' = visitedFFT || position == "dac"
+      next = --trace ("accessing '" ++ position ++ "'")
+             connections ! position
+      
+  in sum $ map (numPaths connections visitedDAC' visitedFFT') next
 
 -- parsing
 
