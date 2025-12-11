@@ -14,18 +14,21 @@ solve :: String -> Int
 solve input =
   let connections = parseInput input
   in trace ("connections: " ++ show connections)
-     numPaths connections Set.empty "qlh"
+     numPaths connections [] "svr"
 
-numPaths :: Map String [String] -> Set String -> String -> Int
+numPaths :: Map String [String] -> [String] -> String -> Int
 numPaths _ visited "out" =
-        if member "fft" visited && member "dac" visited
+        if "fft" `elem` visited && "dac" `elem` visited
         then 1
         else 0
 numPaths connections visited position
-  | member position visited = 0
+  | position `elem` visited = trace ("cycle --" ++ show visited) 0
   | otherwise =
-        let visited' = Set.insert position visited
-            next = trace ("accessing '" ++ position ++ "', num visited: " ++ show (length visited))
+        let visited' = position:visited
+            next = trace (-- "accessing '" ++ position
+                          -- ++ "', num visited: " ++ show (length visited)
+                          -- ++
+              show (reverse visited))
                    connections ! position
 
         in sum $ map (numPaths connections visited') next
