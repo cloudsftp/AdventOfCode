@@ -10,8 +10,26 @@ import Debug.Trace
 solve :: String -> Int
 solve input =
   let (gifts, trees) = parseInput input
-  in trace ("gifts: " ++ show gifts ++ ", trees: " ++ show trees)
-     0
+
+      mapTree ((h, w), amounts) =
+        let space = h * w
+
+            tupleProduct (a, b) = a * b
+            required =
+              sum
+              $ map tupleProduct
+              $ zip amounts gifts
+        
+        in (space, required)
+
+      treeSpots = map mapTree trees
+
+      valid (space, required) = space > required
+  
+  in trace ("gifts: " ++ show gifts ++
+            "\ntrees: " ++ show trees ++
+            "\ntree spots: " ++ show treeSpots)
+     length $ filter valid treeSpots
 
 type Size = (Int, Int)
 --type Gift = Map Position Bool
