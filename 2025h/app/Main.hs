@@ -29,6 +29,7 @@ import qualified Solutions.Day10a (solve)
 import qualified Solutions.Day10b (solve)
 import qualified Solutions.Day11a (solve)
 import qualified Solutions.Day11b (solve)
+import qualified Solutions.Day12a (solve)
 
 main :: IO ()
 main = do
@@ -61,6 +62,7 @@ main = do
                              , ((10, B), Solutions.Day10b.solve)
                              , ((11, A), Solutions.Day11a.solve)
                              , ((11, B), Solutions.Day11b.solve)
+                             , ((12, A), Solutions.Day12a.solve)
                              ]
 
         exerciseId = read (head args) :: ID
